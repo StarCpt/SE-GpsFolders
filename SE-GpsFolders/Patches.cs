@@ -1,14 +1,18 @@
 ﻿using HarmonyLib;
 using Sandbox.Game.Gui;
+using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
-using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using VRage;
+using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 
@@ -16,13 +20,14 @@ namespace SE_GpsFolders
 {
     class GpsFolderRow : MyGuiControlTable.Row
     {
-        public string Name;
+        public string FolderName;
+        public string DisplayName;
 
-        public GpsFolderRow(string name, Color color, MyGuiHighlightTexture? icon, string toolTip = null) : base(
+        public GpsFolderRow(string folderName, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null) : base(
             new MyGps
             {
-                Name = name,
-                DisplayName = name,
+                Name = folderName,
+                DisplayName = displayName,
                 Description = "",
                 IsLocal = true,
                 AlwaysVisible = false,
@@ -32,9 +37,10 @@ namespace SE_GpsFolders
                 GPSColor = color,
             }, toolTip)
         {
-            this.Name = name;
+            this.FolderName = folderName;
+            this.DisplayName = displayName;
             var cell = new MyGuiControlTable.Cell(
-                this.Name,
+                this.DisplayName,
                 this.UserData,
                 toolTip,
                 color,
@@ -46,7 +52,7 @@ namespace SE_GpsFolders
 
     class GpsSeparatorRow : GpsFolderRow
     {
-        public GpsSeparatorRow(string name, Color color, string toolTip = null) : base(name, color, null, toolTip)
+        public GpsSeparatorRow(string name, string displayName, Color color, string toolTip = null) : base(name, displayName, color, null, toolTip)
         {
 
         }
@@ -139,7 +145,7 @@ namespace SE_GpsFolders
                     bool addFolderChildren = expandFoldersChecked || !string.IsNullOrWhiteSpace(searchString);
                     foreach (var folder in rowDict)
                     {
-                        ___m_tableIns.Insert(rowIndex, new GpsFolderRow(folder.Key, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL));
+                        ___m_tableIns.Insert(rowIndex, new GpsFolderRow(folder.Key, folder.Key, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL));
                         rowIndex++;
 
                         if (addFolderChildren)
@@ -151,14 +157,14 @@ namespace SE_GpsFolders
                             }
                         }
                     }
-                    GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
+                    GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
                     ___m_tableIns.Insert(rowIndex, separatorRow);
                     rowIndex++;
                 }
                 else
                 {
                     ___m_tableIns.Rows.Clear();
-                    ___m_tableIns.Add(new GpsFolderRow('…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL));
+                    ___m_tableIns.Add(new GpsFolderRow(currentFolderTag, '…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL));
                     foreach (var row in rowDict[currentFolderTag])
                     {
                         ___m_tableIns.Add(row);
@@ -199,7 +205,7 @@ namespace SE_GpsFolders
                     ___m_textBoxHex.Enabled = false;
                     ___m_checkInsShowOnHud.Enabled = false;
                     ___m_checkInsAlwaysVisible.Enabled = false;
-                    ___m_buttonCopy.Enabled = false;
+                    //___m_buttonCopy.Enabled = false;
                 }
                 else
                 {
@@ -228,7 +234,7 @@ namespace SE_GpsFolders
                 if (sender.SelectedRow is GpsFolderRow folder)
                 {
                     if (currentFolderTag == null)
-                        currentFolderTag = folder.Name;
+                        currentFolderTag = folder.FolderName;
                     else
                         currentFolderTag = null;
 
@@ -268,15 +274,15 @@ namespace SE_GpsFolders
                         i--;
                         if (currentFolderTag == null && !(row is GpsSeparatorRow))
                         {
-                            rowDict.Add(row.Name, new List<MyGuiControlTable.Row>());
-                            rowDict[row.Name].Add(row);
+                            rowDict.Add(row.FolderName, new List<MyGuiControlTable.Row>());
+                            rowDict[row.FolderName].Add(row);
                         }
                     }
                 }
 
                 if (currentFolderTag != null)
                 {
-                    ___m_tableIns.Insert(0, new GpsFolderRow('…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL));
+                    ___m_tableIns.Insert(0, new GpsFolderRow(currentFolderTag, '…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL));
                 }
                 else
                 {
@@ -306,7 +312,7 @@ namespace SE_GpsFolders
                             rowIndex++;
                         }
                     }
-                    GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
+                    GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
                     ___m_tableIns.Insert(rowIndex, separatorRow);
                     rowIndex++;
                 }
@@ -320,12 +326,143 @@ namespace SE_GpsFolders
             }
         }
 
+        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "OnButtonPressedCopy", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { typeof(MyGuiControlButton) })]
+        static class Patch_OnButtonPressedCopy
+        {
+            static bool Prefix(MyGuiControlButton sender, MyGuiControlTable ___m_tableIns)
+            {
+                if (___m_tableIns.SelectedRow is GpsFolderRow folder)
+                {
+                    StringBuilder gpses = new StringBuilder();
+                    foreach (var row in ___m_tableIns.Rows)
+                    {
+                        if (row.GetFolderTag() == folder.FolderName)
+                        {
+                            gpses.Append(((MyGps)row.UserData).ToString())
+                                 .Append(folder.FolderName)
+                                 .AppendLine(":");
+                        }
+                    }
+
+                    if (gpses.Length != 0)
+                    {
+                        MyVRage.Platform.System.Clipboard = gpses.ToString();
+                    }
+
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "OnButtonPressedDelete", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { typeof(MyGuiControlButton) })]
+        static class Patch_OnButtonPressedDelete
+        {
+            static bool Prefix(MyGuiControlButton sender, MyGuiControlTable ___m_tableIns)
+            {
+                if (___m_tableIns.SelectedRow is GpsFolderRow folder)
+                {
+                    List<MyGps> gpsesToDelete = new List<MyGps>();
+                    for (int i = 0; i <  ___m_tableIns.Rows.Count; i++)
+                    {
+                        if (___m_tableIns.Rows[i].GetFolderTag() == folder.FolderName)
+                        {
+                            gpsesToDelete.Add((MyGps)___m_tableIns.Rows[i].UserData);
+                        }
+                    }
+
+                    foreach (var gps in gpsesToDelete)
+                    {
+                        MySession.Static.Gpss.SendDeleteGpsRequest(MySession.Static.LocalPlayerId, gps.GetHashCode());
+                    }
+
+                    return false;
+                }
+                return true;
+            }
+        }
+
         //[HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "trySync", MethodType.Normal)]
         //[HarmonyPatch(new Type[] { })]
         //static class Patch_trySync
         //{
         //
         //}
+    }
+
+    static class MyGpsCollectionPatches
+    {
+        [HarmonyPatch(typeof(MyGpsCollection), "ScanText", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { typeof(string), typeof(string) })]
+        static class Patch_ScanText
+        {
+            static readonly int PARSE_MAX_COUNT = 20;
+            static readonly string m_ScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):";
+            static readonly string m_ColorScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?):";
+            static readonly string m_ColorAndFolderScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?):([^:]{0,32}):";
+
+            static bool Prefix(string input, string desc, ref int __result)
+            {
+                int num = 0;
+                bool containsColorAndFolder = true;
+                MatchCollection matchCollection = Regex.Matches(input, m_ColorAndFolderScanPattern);
+                if (matchCollection == null || matchCollection.Count == 0)
+                {
+                    matchCollection = Regex.Matches(input, m_ScanPattern);
+                    containsColorAndFolder = false;
+                }
+
+
+                Color gPSColor = new Color(117, 201, 241);
+                foreach (Match item in matchCollection)
+                {
+                    string value = item.Groups[1].Value;
+                    double value2;
+                    double value3;
+                    double value4;
+                    string folder = null;
+                    try
+                    {
+                        value2 = double.Parse(item.Groups[2].Value, CultureInfo.InvariantCulture);
+                        value2 = Math.Round(value2, 2);
+                        value3 = double.Parse(item.Groups[3].Value, CultureInfo.InvariantCulture);
+                        value3 = Math.Round(value3, 2);
+                        value4 = double.Parse(item.Groups[4].Value, CultureInfo.InvariantCulture);
+                        value4 = Math.Round(value4, 2);
+                        if (containsColorAndFolder)
+                        {
+                            gPSColor = new ColorDefinitionRGBA(item.Groups[5].Value);
+                            folder = item.Groups[6].Value;
+                        }
+                    }
+                    catch (SystemException)
+                    {
+                        continue;
+                    }
+
+                    MyGps gps = new MyGps
+                    {
+                        Name = value,
+                        Description = $"<Folder>{folder}</Folder>\n" + desc,
+                        Coords = new Vector3D(value2, value3, value4),
+                        GPSColor = gPSColor,
+                        ShowOnHud = false
+                    };
+                    gps.UpdateHash();
+                    MySession.Static.Gpss.SendAddGpsRequest(MySession.Static.LocalPlayerId, ref gps, 0L);
+                    num++;
+                    if (num == PARSE_MAX_COUNT)
+                    {
+                        __result = num;
+                    }
+                }
+
+                __result = num;
+                return false;
+            }
+        }
     }
 
     public static class Extensions
@@ -343,6 +480,7 @@ namespace SE_GpsFolders
                 const string startTag = @"<Folder>";
                 const string endTag = @"</Folder>";
                 const int startIndex = 8;
+                const int maxTagLength = 32;
                 int endIndex;
                 var compareType = StringComparison.CurrentCulture;
 
@@ -350,7 +488,7 @@ namespace SE_GpsFolders
                     (endIndex = gps.Description.IndexOf(endTag, startIndex, compareType)) != -1)
                 {
                     string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
-                    if (tag != MyTerminalGpsControllerPatches.MISC_GPS_SEPARATOR_NAME)
+                    if (tag.Length <= maxTagLength)
                     {
                         return tag;
                     }
