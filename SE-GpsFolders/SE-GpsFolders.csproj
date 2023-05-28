@@ -112,8 +112,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MyTerminalGpsControllerWrapper.cs" />
-    <Compile Include="MyTerminalGpsControllerPatches.cs" />
+    <Compile Include="Patches.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
