@@ -505,10 +505,22 @@ namespace GpsFolders
                         gpsesToDelete.Add((MyGps)row.UserData);
                     }
 
-                    foreach (MyGps gps in gpsesToDelete)
-                    {
-                        MySession.Static.Gpss.SendDeleteGpsRequest(MySession.Static.LocalPlayerId, gps.GetHashCode());
-                    }
+                    var confirmationDialog = MyGuiSandbox.CreateMessageBox(
+                        MyMessageBoxStyleEnum.Info,
+                        MyMessageBoxButtonsType.YES_NO,
+                        new StringBuilder("Are you sure you want to delete this folder and its content?"),
+                        new StringBuilder("Delete Folder"),
+                        callback: result =>
+                        {
+                            if (result == MyGuiScreenMessageBox.ResultEnum.YES)
+                            {
+                                foreach (MyGps gps in gpsesToDelete)
+                                {
+                                    MySession.Static.Gpss.SendDeleteGpsRequest(MySession.Static.LocalPlayerId, gps.GetHashCode());
+                                }
+                            }
+                        });
+                    MyGuiSandbox.AddScreen(confirmationDialog);
 
                     return false;
                 }
