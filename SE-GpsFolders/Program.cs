@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VRage.Plugins;
 
-namespace SE_GpsFolders
+namespace GpsFolders
 {
     public class Main : IPlugin
     {

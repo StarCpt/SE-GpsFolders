@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
+using Sandbox.Game;
 using Sandbox.Game.Gui;
+using Sandbox.Game.Localization;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
@@ -12,11 +14,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using VRage;
+using VRage.Audio;
 using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 
-namespace SE_GpsFolders
+namespace GpsFolders
 {
     abstract class NonGpsRow : MyGuiControlTable.Row
     {
@@ -82,13 +85,14 @@ namespace SE_GpsFolders
         {
             static void Postfix(MyGuiControlTabPage gpsPage)
             {
-                MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel
+                MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel()
                 {
                     Position = new Vector2(-0.295f, -0.267f),
                     Name = "ExpandFoldersLabel",
                     OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
                     Text = MyTexts.GetString("Expand Folders"),
                 };
+                gpsPage.Controls.Add(expandFoldersLabel);
 
                 MyGuiControlCheckbox expandFoldersCheckbox = new MyGuiControlCheckbox
                 {
@@ -98,9 +102,40 @@ namespace SE_GpsFolders
                     IsChecked = MyTerminalGpsControllerPatches.expandFoldersChecked,
                 };
                 expandFoldersCheckbox.SetToolTip(new MyToolTips("Expand Folders"));
-
-                gpsPage.Controls.Add(expandFoldersLabel);
                 gpsPage.Controls.Add(expandFoldersCheckbox);
+
+                MyGuiControlBase textInsY = gpsPage.GetControlByName("textInsY");
+                MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
+
+                MyGuiControlButton showFolderOnHudButton = new MyGuiControlButton
+                {
+                    Text = "Show All",
+                    Position = new Vector2(buttonFromCurrent.Position.X + 0.43f + 0.001f, buttonFromCurrent.Position.Y),
+                    Name = "ShowFolderOnHudButton",
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+                    VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
+                    IsAutoScaleEnabled = true,
+                    IsAutoEllipsisEnabled = true,
+                    ShowTooltipWhenDisabled = false,
+                };
+                showFolderOnHudButton.Size = new Vector2(textInsY.Size.X / 2.06f, 48f / MyGuiConstants.GUI_OPTIMAL_SIZE.Y);
+                showFolderOnHudButton.SetToolTip("Show all entries in the folder on HUD");
+                gpsPage.Controls.Add(showFolderOnHudButton);
+
+                MyGuiControlButton hideFolderOnHudButton = new MyGuiControlButton
+                {
+                    Text = "Hide All",
+                    Position = new Vector2(showFolderOnHudButton.Position.X + textInsY.Size.X + 0.0002f, showFolderOnHudButton.Position.Y),
+                    Name = "HideFolderOnHudButton",
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_TOP,
+                    VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
+                    IsAutoScaleEnabled = true,
+                    IsAutoEllipsisEnabled = true,
+                    ShowTooltipWhenDisabled = false,
+                };
+                hideFolderOnHudButton.Size = showFolderOnHudButton.Size;
+                hideFolderOnHudButton.SetToolTip("Hide all entries in the folder from HUD");
+                gpsPage.Controls.Add(hideFolderOnHudButton);
             }
         }
     }
@@ -115,18 +150,48 @@ namespace SE_GpsFolders
         public static string currentFolderTag = null;
         public static bool expandFoldersChecked = false;
 
+        static MyGuiControlCheckbox m_expandFoldersCheckbox;
+        static MyGuiControlButton m_showFolderOnHudButton;
+        static MyGuiControlButton m_hideFolderOnHudButton;
+
         static void PopulateList(object instance, string searchString) => populateListMethod.Invoke(instance, new object[] { searchString });
 
         [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Init", MethodType.Normal)]
         [HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]
         static class Patch_Init
         {
-            static void Postfix(object __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox)
+            static void Postfix(object __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlTable ___m_tableIns)
             {
-                ((MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox")).IsCheckedChanged += delegate
+                (m_expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox")).IsCheckedChanged += delegate
                 {
                     expandFoldersChecked = !expandFoldersChecked;
                     PopulateList(__instance, ___m_searchBox.SearchText);
+                };
+
+                (m_showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton")).ButtonClicked += delegate
+                {
+                    if (___m_tableIns.SelectedRow is GpsFolderRow folder)
+                    {
+                        foreach (var row in folder.FolderSubRows)
+                        {
+                            MyGps gps = (MyGps)row.UserData;
+                            gps.ShowOnHud = true;
+                            MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, true);
+                        }
+                    }
+                };
+
+                (m_hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton")).ButtonClicked += delegate
+                {
+                    if (___m_tableIns.SelectedRow is GpsFolderRow folder)
+                    {
+                        foreach (var row in folder.FolderSubRows)
+                        {
+                            MyGps gps = (MyGps)row.UserData;
+                            gps.ShowOnHud = false;
+                            MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, false);
+                        }
+                    }
                 };
             }
         }
@@ -198,6 +263,11 @@ namespace SE_GpsFolders
                         }
                     }
                 }
+
+                if (___m_tableIns.SelectedRow is NonGpsRow)
+                {
+                    ___m_tableIns.SelectedRowIndex = null;
+                }
             }
         }
         
@@ -233,21 +303,35 @@ namespace SE_GpsFolders
                     ___m_textBoxHex.Enabled = false;
                     ___m_checkInsShowOnHud.Enabled = false;
                     ___m_checkInsAlwaysVisible.Enabled = false;
-                    ___m_buttonCopy.Enabled = false;
 
                     if (sender.SelectedRow is GpsFolderRow)
                     {
                         ___m_buttonCopy.Enabled = true;
+
+                        if (m_showFolderOnHudButton != null)
+                            m_showFolderOnHudButton.Enabled = true;
+                        if (m_hideFolderOnHudButton != null)
+                            m_hideFolderOnHudButton.Enabled = true;
                     }
                     else if (sender.SelectedRow is GpsSeparatorRow)
                     {
+                        ___m_buttonCopy.Enabled = false;
 
+                        if (m_showFolderOnHudButton != null)
+                            m_showFolderOnHudButton.Enabled = false;
+                        if (m_hideFolderOnHudButton != null)
+                            m_hideFolderOnHudButton.Enabled = false;
                     }
                 }
                 else
                 {
                     ___m_checkInsShowOnHud.Enabled = true;
                     ___m_checkInsAlwaysVisible.Enabled = true;
+
+                    if (m_showFolderOnHudButton != null)
+                        m_showFolderOnHudButton.Enabled = false;
+                    if (m_hideFolderOnHudButton != null)
+                        m_hideFolderOnHudButton.Enabled = false;
                 }
             }
         }
@@ -351,9 +435,12 @@ namespace SE_GpsFolders
                 ___m_tableIns.SelectedRow = selectedRow;
                 if (___m_tableIns.SelectedRow is NonGpsRow)
                 {
-                    ___m_tableIns.SelectedRow = ___m_tableIns.Rows.FirstOrDefault(row => !(row is NonGpsRow));
+                    ___m_tableIns.SelectedRowIndex = null;
                 }
-                ___m_tableIns.ScrollToSelection();
+                else
+                {
+                    ___m_tableIns.ScrollToSelection();
+                }
             }
         }
 
@@ -363,6 +450,9 @@ namespace SE_GpsFolders
         {
             static bool Prefix(MyGuiControlButton sender, MyGuiControlTable ___m_tableIns)
             {
+                if (___m_tableIns.SelectedRow == null)
+                    return false;
+
                 bool runOriginal = !(___m_tableIns.SelectedRow is NonGpsRow);
                 if (___m_tableIns.SelectedRow is GpsFolderRow folder)
                 {
@@ -419,6 +509,18 @@ namespace SE_GpsFolders
                     return false;
                 }
                 return runOriginal;
+            }
+        }
+
+        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Close", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { })]
+        static class Patch_Close
+        {
+            static void Postfix()
+            {
+                m_expandFoldersCheckbox = null;
+                m_showFolderOnHudButton = null;
+                m_hideFolderOnHudButton = null;
             }
         }
 

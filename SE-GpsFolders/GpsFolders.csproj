@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{2A6EA0FD-BF34-4C11-BB99-FD43F16C6518}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>SE_GpsFolders</RootNamespace>
+    <RootNamespace>GpsFoldersPlugin</RootNamespace>
     <AssemblyName>GpsFolders</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <LangVersion>7.3</LangVersion>
