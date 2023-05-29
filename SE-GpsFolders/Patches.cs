@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
 using Sandbox.Game;
 using Sandbox.Game.Gui;
-using Sandbox.Game.Localization;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
@@ -14,7 +13,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using VRage;
-using VRage.Audio;
 using VRage.Game;
 using VRage.Utils;
 using VRageMath;
@@ -268,6 +266,11 @@ namespace GpsFolders
                 {
                     ___m_tableIns.SelectedRowIndex = null;
                 }
+
+                if (m_showFolderOnHudButton != null)
+                    m_showFolderOnHudButton.Enabled = string.IsNullOrWhiteSpace(searchString);
+                if (m_hideFolderOnHudButton != null)
+                    m_hideFolderOnHudButton.Enabled = string.IsNullOrWhiteSpace(searchString);
             }
         }
         
@@ -288,7 +291,8 @@ namespace GpsFolders
                 MyGuiControlTextbox ___m_textBoxHex,
                 MyGuiControlCheckbox ___m_checkInsShowOnHud,
                 MyGuiControlCheckbox ___m_checkInsAlwaysVisible,
-                MyGuiControlButton ___m_buttonCopy)
+                MyGuiControlButton ___m_buttonCopy,
+                MyGuiControlSearchBox ___m_searchBox)
             {
                 if (sender.SelectedRow is NonGpsRow)
                 {
@@ -309,9 +313,9 @@ namespace GpsFolders
                         ___m_buttonCopy.Enabled = true;
 
                         if (m_showFolderOnHudButton != null)
-                            m_showFolderOnHudButton.Enabled = true;
+                            m_showFolderOnHudButton.Enabled = string.IsNullOrWhiteSpace(___m_searchBox.SearchText);
                         if (m_hideFolderOnHudButton != null)
-                            m_hideFolderOnHudButton.Enabled = true;
+                            m_hideFolderOnHudButton.Enabled = string.IsNullOrWhiteSpace(___m_searchBox.SearchText);
                     }
                     else if (sender.SelectedRow is GpsSeparatorRow)
                     {
