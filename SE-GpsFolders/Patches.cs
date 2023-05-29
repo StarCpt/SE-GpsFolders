@@ -18,15 +18,20 @@ using VRageMath;
 
 namespace SE_GpsFolders
 {
-    class GpsFolderRow : MyGuiControlTable.Row
+    abstract class NonGpsRow : MyGuiControlTable.Row
     {
-        public string FolderName;
+        public string Name;
         public string DisplayName;
+        public MyGuiHighlightTexture? Icon
+        {
+            get => this.GetCell(0).Icon;
+            set => this.GetCell(0).Icon = value;
+        }
 
-        public GpsFolderRow(string folderName, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null) : base(
+        protected NonGpsRow(string name, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null) : base(
             new MyGps
             {
-                Name = folderName,
+                Name = name,
                 DisplayName = displayName,
                 Description = "",
                 IsLocal = true,
@@ -37,7 +42,7 @@ namespace SE_GpsFolders
                 GPSColor = color,
             }, toolTip)
         {
-            this.FolderName = folderName;
+            this.Name = name;
             this.DisplayName = displayName;
             var cell = new MyGuiControlTable.Cell(
                 this.DisplayName,
@@ -49,10 +54,21 @@ namespace SE_GpsFolders
             this.AddCell(cell);
         }
     }
-
-    class GpsSeparatorRow : GpsFolderRow
+    class GpsFolderRow : NonGpsRow
     {
-        public GpsSeparatorRow(string name, string displayName, Color color, string toolTip = null) : base(name, displayName, color, null, toolTip)
+        public List<MyGuiControlTable.Row> FolderSubRows;//gpses that would be visible if folders were expanded. takes the search string into account
+
+        public GpsFolderRow(string folderName, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null)
+            : base(folderName, displayName, color, icon, toolTip)
+        {
+            FolderSubRows = new List<MyGuiControlTable.Row>();
+        }
+    }
+
+    class GpsSeparatorRow : NonGpsRow
+    {
+        public GpsSeparatorRow(string name, string displayName, Color color, string toolTip = null)
+            : base(name, displayName, color, null, toolTip)
         {
 
         }
@@ -81,7 +97,7 @@ namespace SE_GpsFolders
                     OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
                     IsChecked = MyTerminalGpsControllerPatches.expandFoldersChecked,
                 };
-                expandFoldersCheckbox.SetToolTip(new MyToolTips("Expand Folders tooltip placeholder"));
+                expandFoldersCheckbox.SetToolTip(new MyToolTips("Expand Folders"));
 
                 gpsPage.Controls.Add(expandFoldersLabel);
                 gpsPage.Controls.Add(expandFoldersCheckbox);
@@ -143,30 +159,39 @@ namespace SE_GpsFolders
                 {
                     int rowIndex = 0;
                     bool addFolderChildren = expandFoldersChecked || !string.IsNullOrWhiteSpace(searchString);
-                    foreach (var folder in rowDict)
+                    foreach (var keyValue in rowDict)
                     {
-                        ___m_tableIns.Insert(rowIndex, new GpsFolderRow(folder.Key, folder.Key, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL));
+                        var folder = new GpsFolderRow(keyValue.Key, keyValue.Key, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL);
+                        ___m_tableIns.Insert(rowIndex, folder);
                         rowIndex++;
 
+                        folder.FolderSubRows = keyValue.Value;
                         if (addFolderChildren)
                         {
-                            foreach (var row in folder.Value)
+                            foreach (var row in keyValue.Value)
                             {
-                                ___m_tableIns.Insert(rowIndex, row);    
+                                ___m_tableIns.Insert(rowIndex, row);  
+                                
                                 rowIndex++;
                             }
                         }
                     }
-                    GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
-                    ___m_tableIns.Insert(rowIndex, separatorRow);
-                    rowIndex++;
+
+                    if (rowIndex > 0)
+                    {
+                        GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
+                        ___m_tableIns.Insert(rowIndex, separatorRow);
+                        rowIndex++;
+                    }
                 }
                 else
                 {
                     ___m_tableIns.Rows.Clear();
-                    ___m_tableIns.Add(new GpsFolderRow(currentFolderTag, '…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL));
+                    var folder = new GpsFolderRow(currentFolderTag, '…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL);
+                    ___m_tableIns.Add(folder);
                     if (rowDict.ContainsKey(currentFolderTag))
                     {
+                        folder.FolderSubRows = rowDict[currentFolderTag];
                         foreach (var row in rowDict[currentFolderTag])
                         {
                             ___m_tableIns.Add(row);
@@ -195,7 +220,7 @@ namespace SE_GpsFolders
                 MyGuiControlCheckbox ___m_checkInsAlwaysVisible,
                 MyGuiControlButton ___m_buttonCopy)
             {
-                if (sender.SelectedRow is GpsFolderRow folder)
+                if (sender.SelectedRow is NonGpsRow)
                 {
                     ___m_panelInsName.Enabled = false;
                     ___m_panelInsDesc.Enabled = false;
@@ -208,22 +233,21 @@ namespace SE_GpsFolders
                     ___m_textBoxHex.Enabled = false;
                     ___m_checkInsShowOnHud.Enabled = false;
                     ___m_checkInsAlwaysVisible.Enabled = false;
-                    ___m_buttonCopy.Enabled = !(folder is GpsSeparatorRow);
+                    ___m_buttonCopy.Enabled = false;
+
+                    if (sender.SelectedRow is GpsFolderRow)
+                    {
+                        ___m_buttonCopy.Enabled = true;
+                    }
+                    else if (sender.SelectedRow is GpsSeparatorRow)
+                    {
+
+                    }
                 }
                 else
                 {
-                    //___m_panelInsName.Enabled = false;
-                    //___m_panelInsDesc.Enabled = false;
-                    //___m_xCoord.Enabled = false;
-                    //___m_yCoord.Enabled = false;
-                    //___m_zCoord.Enabled = false;
-                    //___m_sliderHue.Enabled = false;
-                    //___m_sliderSaturation.Enabled = false;
-                    //___m_sliderValue.Enabled = false;
-                    //___m_textBoxHex.Enabled = false;
                     ___m_checkInsShowOnHud.Enabled = true;
                     ___m_checkInsAlwaysVisible.Enabled = true;
-                    //___m_buttonCopy.Enabled = false;
                 }
             }
         }
@@ -234,19 +258,18 @@ namespace SE_GpsFolders
         {
             static bool Prefix(object __instance, MyGuiControlTable sender, MyGuiControlTable.EventArgs args, MyGuiControlSearchBox ___m_searchBox)
             {
+                bool runOriginal = !(sender.SelectedRow is NonGpsRow);
                 if (sender.SelectedRow is GpsFolderRow folder)
                 {
-                    if (folder is GpsSeparatorRow)
-                        return false;
-                    else if (currentFolderTag == null)
-                        currentFolderTag = folder.FolderName;
+                    if (currentFolderTag == null)
+                        currentFolderTag = folder.Name;
                     else
                         currentFolderTag = null;
 
                     PopulateList(__instance, ___m_searchBox.SearchText);
                     return false;
                 }
-                return true;
+                return runOriginal;
             }
         }
 
@@ -256,11 +279,8 @@ namespace SE_GpsFolders
         {
             static bool Prefix(MyGuiControlTable sender)
             {
-                if (sender.SelectedRow is GpsFolderRow folder)
-                {
-                    return false;
-                }
-                return true;
+                bool runOriginal = !(sender.SelectedRow is NonGpsRow);
+                return runOriginal;
             }
         }
 
@@ -271,63 +291,67 @@ namespace SE_GpsFolders
             static void Postfix(MyGuiControlTable ___m_tableIns)
             {
                 MyGuiControlTable.Row selectedRow = ___m_tableIns.SelectedRow;
-                var rowDict = new SortedDictionary<string, List<MyGuiControlTable.Row>>();
+                var folderDict = new SortedDictionary<string, GpsFolderRow>();
 
                 for (int i = 0; i < ___m_tableIns.RowsCount; i++)
                 {
-                    if (___m_tableIns.Rows[i] is GpsFolderRow row)
+                    if (___m_tableIns.Rows[i] is NonGpsRow row)
                     {
                         ___m_tableIns.Remove(row);
                         i--;
-                        if (currentFolderTag == null && !(row is GpsSeparatorRow))
+                        if (row is GpsFolderRow folder)
                         {
-                            rowDict.Add(row.FolderName, new List<MyGuiControlTable.Row>());
-                            rowDict[row.FolderName].Add(row);
+                            folderDict.Add(folder.Name, folder);
                         }
                     }
                 }
 
                 if (currentFolderTag != null)
                 {
-                    ___m_tableIns.Insert(0, new GpsFolderRow(currentFolderTag, '…' + currentFolderTag, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL));
+                    if (folderDict.TryGetValue(currentFolderTag, out GpsFolderRow folder))
+                    {
+                        folder.DisplayName = '…' + currentFolderTag;
+                        folder.Icon = MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL;
+                        ___m_tableIns.Insert(0, folder);
+                    }
                 }
                 else
                 {
-                    for (int i = 0; i < ___m_tableIns.RowsCount; i++)
+                    foreach (var item in folderDict)
                     {
-                        var row = ___m_tableIns.Rows[i];
-                        string folderTag = row.GetFolderTag();
-                        if (folderTag != null)
+                        foreach (var row in item.Value.FolderSubRows)
                         {
-                            if (!rowDict.ContainsKey(folderTag))
-                            {
-                                rowDict.Add(folderTag, new List<MyGuiControlTable.Row>());
-                            }
-
                             ___m_tableIns.Remove(row);
-                            i--;
-                            rowDict[folderTag].Add(row);
                         }
                     }
 
                     int rowIndex = 0;
-                    foreach (var folder in rowDict)
+                    foreach (var item in folderDict)
                     {
-                        foreach (var row in folder.Value)
+                        ___m_tableIns.Insert(rowIndex, item.Value);
+                        rowIndex++;
+                        if (expandFoldersChecked)
                         {
-                            ___m_tableIns.Insert(rowIndex, row);
-                            rowIndex++;
+                            foreach (var row in item.Value.FolderSubRows)
+                            {
+                                ___m_tableIns.Insert(rowIndex, row);
+                                rowIndex++;
+                            }
                         }
                     }
-                    GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
-                    ___m_tableIns.Insert(rowIndex, separatorRow);
-                    rowIndex++;
+
+                    if (rowIndex > 0)
+                    {
+                        GpsSeparatorRow separatorRow = new GpsSeparatorRow(MISC_GPS_SEPARATOR_NAME, MISC_GPS_SEPARATOR_NAME, Color.Yellow, null);
+                        ___m_tableIns.Insert(rowIndex, separatorRow);
+                        rowIndex++;
+                    }
                 }
 
                 ___m_tableIns.SelectedRow = selectedRow;
-                if (___m_tableIns.SelectedRow is GpsFolderRow)
+                if (___m_tableIns.SelectedRow is NonGpsRow)
                 {
-                    ___m_tableIns.SelectedRow = ___m_tableIns.Rows.FirstOrDefault(row => !(row is GpsFolderRow));
+                    ___m_tableIns.SelectedRow = ___m_tableIns.Rows.FirstOrDefault(row => !(row is NonGpsRow));
                 }
                 ___m_tableIns.ScrollToSelection();
             }
@@ -339,20 +363,22 @@ namespace SE_GpsFolders
         {
             static bool Prefix(MyGuiControlButton sender, MyGuiControlTable ___m_tableIns)
             {
+                bool runOriginal = !(___m_tableIns.SelectedRow is NonGpsRow);
                 if (___m_tableIns.SelectedRow is GpsFolderRow folder)
                 {
                     StringBuilder gpses = new StringBuilder();
-                    foreach (var row in ___m_tableIns.Rows)
+                    for (int i = 0; i < folder.FolderSubRows.Count;)
                     {
-                        if (row.GetFolderTag() == folder.FolderName)
-                        {
-                            gpses.Append(((MyGps)row.UserData).ToString())
-                                 .Append(folder.FolderName)
-                                 .AppendLine(":");
-                        }
+                        gpses.Append(((MyGps)folder.FolderSubRows[i].UserData).ToString())
+                             .Append(folder.Name)
+                             .Append(":");
+
+                        i++;
+                        if (i == folder.FolderSubRows.Count - 1)
+                            gpses.AppendLine();
                     }
 
-                    if (gpses.Length != 0)
+                    if (gpses.Length > 0)
                     {
                         MyVRage.Platform.System.Clipboard = gpses.ToString();
                     }
@@ -364,7 +390,8 @@ namespace SE_GpsFolders
                     MyVRage.Platform.System.Clipboard = ___m_tableIns.SelectedRow.UserData.ToString() + tag + ':';
                     return false;
                 }
-                return true;
+
+                return runOriginal;
             }
         }
 
@@ -374,28 +401,24 @@ namespace SE_GpsFolders
         {
             static bool Prefix(MyGuiControlButton sender, MyGuiControlTable ___m_tableIns)
             {
+                bool runOriginal = !(___m_tableIns.SelectedRow is NonGpsRow);
                 if (___m_tableIns.SelectedRow is GpsFolderRow folder)
                 {
-                    if (folder is GpsSeparatorRow)
-                        return false;
-
                     List<MyGps> gpsesToDelete = new List<MyGps>();
-                    for (int i = 0; i <  ___m_tableIns.Rows.Count; i++)
+
+                    foreach (MyGuiControlTable.Row row in folder.FolderSubRows)
                     {
-                        if (___m_tableIns.Rows[i].GetFolderTag() == folder.FolderName)
-                        {
-                            gpsesToDelete.Add((MyGps)___m_tableIns.Rows[i].UserData);
-                        }
+                        gpsesToDelete.Add((MyGps)row.UserData);
                     }
 
-                    foreach (var gps in gpsesToDelete)
+                    foreach (MyGps gps in gpsesToDelete)
                     {
                         MySession.Static.Gpss.SendDeleteGpsRequest(MySession.Static.LocalPlayerId, gps.GetHashCode());
                     }
 
                     return false;
                 }
-                return true;
+                return runOriginal;
             }
         }
 
@@ -493,7 +516,7 @@ namespace SE_GpsFolders
 
     public static class Extensions
     {
-        public static MyGuiHighlightTexture ChangeSize(this MyGuiHighlightTexture texture, Vector2 size)
+        public static MyGuiHighlightTexture SetSize(this MyGuiHighlightTexture texture, Vector2 size)
         {
             texture.SizePx = size;
             return texture;
@@ -501,7 +524,7 @@ namespace SE_GpsFolders
 
         public static string GetFolderTag(this MyGuiControlTable.Row row)
         {
-            if (!(row.UserData is GpsFolderRow) && row.UserData is MyGps gps)
+            if (!(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {
                 const string startTag = @"<Folder>";
                 const string endTag = @"</Folder>";
