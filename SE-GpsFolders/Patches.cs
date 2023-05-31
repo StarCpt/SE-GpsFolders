@@ -378,6 +378,9 @@ namespace GpsFolders
         {
             static void Postfix(MyGuiControlTable ___m_tableIns)
             {
+                if (___m_tableIns.SelectedRow == null)
+                    return;
+
                 MyGuiControlTable.Row selectedRow = ___m_tableIns.SelectedRow;
                 var folderDict = new SortedDictionary<string, GpsFolderRow>();
 
@@ -642,7 +645,7 @@ namespace GpsFolders
 
         public static string GetFolderTag(this MyGuiControlTable.Row row)
         {
-            if (!(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
+            if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {
                 const string startTag = @"<Folder>";
                 const string endTag = @"</Folder>";
@@ -652,8 +655,9 @@ namespace GpsFolders
                 int endIndex;
                 var compareType = StringComparison.CurrentCulture;
 
-                if (gps.Description.StartsWith(startTag, compareType) &&
-                    (endIndex = gps.Description.IndexOf(endTag, startIndex, compareType)) != -1)
+                if (gps.Description != null &&
+                    gps.Description.StartsWith(startTag, compareType) &&
+                    (endIndex = gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, maxTagLength), compareType)) > startIndex)
                 {
                     string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
                     if (tag.Length >= minTagLength && tag.Length <= maxTagLength)
