@@ -408,14 +408,6 @@ namespace GpsFolders
                 }
                 else
                 {
-                    foreach (var item in folderDict)
-                    {
-                        foreach (var row in item.Value.FolderSubRows)
-                        {
-                            ___m_tableIns.Remove(row);
-                        }
-                    }
-
                     int rowIndex = 0;
                     foreach (var item in folderDict)
                     {
@@ -425,6 +417,7 @@ namespace GpsFolders
                         {
                             foreach (var row in item.Value.FolderSubRows)
                             {
+                                ___m_tableIns.Remove(row);
                                 ___m_tableIns.Insert(rowIndex, row);
                                 rowIndex++;
                             }
@@ -492,11 +485,11 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "OnButtonPressedDelete", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlButton) })]
-        static class Patch_OnButtonPressedDelete
+        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Delete", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { })]
+        static class Patch_Delete
         {
-            static bool Prefix(MyGuiControlButton sender, MyGuiControlTable ___m_tableIns)
+            static bool Prefix(MyGuiControlTable ___m_tableIns)
             {
                 bool runOriginal = !(___m_tableIns.SelectedRow is NonGpsRow);
                 if (___m_tableIns.SelectedRow is GpsFolderRow folder)
