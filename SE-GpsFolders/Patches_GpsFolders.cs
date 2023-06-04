@@ -575,7 +575,7 @@ namespace GpsFolders
         [HarmonyPatch(new Type[] { typeof(string), typeof(string) })]
         static class Patch_ScanText
         {
-            static readonly int PARSE_MAX_COUNT = 20;
+            static readonly int PARSE_MAX_COUNT = 100;
             static readonly string m_UnifiedScanPattern = @"GPS:([^:]{0,32}):([\d\.-]*):([\d\.-]*):([\d\.-]*):?(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?)?:([^\r\n]{0,32}?):?(?=[^:]*GPS:|[^:]*$)";
 
             static bool Prefix(string input, string desc, ref int __result)
