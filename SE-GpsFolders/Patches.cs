@@ -551,40 +551,27 @@ namespace GpsFolders
         static class Patch_ScanText
         {
             static readonly int PARSE_MAX_COUNT = 20;
-            static readonly string m_ScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):";
-            static readonly string m_FolderScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):([^:]{0,32}):";
-            static readonly string m_ColorScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?):";
-            static readonly string m_ColorAndFolderScanPattern = "GPS:([^:]{0,32}):([\\d\\.-]*):([\\d\\.-]*):([\\d\\.-]*):(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?):([^:]{0,32}):";
+            static readonly string m_UnifiedScanPattern = @"GPS:([^:]{0,32}):([\d\.-]*):([\d\.-]*):([\d\.-]*):?(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?)?:([^\r\n]{0,32}?):?(?=[^:]*GPS:|[^:]*$)";
 
             static bool Prefix(string input, string desc, ref int __result)
             {
                 int num = 0;
-                bool containsColor = true;
-                bool containsFolder = true;
-                MatchCollection matchCollection = Regex.Matches(input, m_ColorAndFolderScanPattern);
-                if (matchCollection == null || matchCollection.Count == 0)
-                {
-                    matchCollection = Regex.Matches(input, m_ColorScanPattern);
-                    containsFolder = false;
-                }
-                if (matchCollection == null || matchCollection.Count == 0)
-                {
-                    matchCollection = Regex.Matches(input, m_ScanPattern);
-                    containsColor = false;
-                    containsFolder = false;
-                }
+                MatchCollection matchCollection = Regex.Matches(input, m_UnifiedScanPattern);
 
-
-                Color gPSColor = new Color(117, 201, 241);
                 foreach (Match item in matchCollection)
                 {
                     string value = item.Groups[1].Value;
                     double value2;
                     double value3;
                     double value4;
+
+                    Color gPSColor = new Color(117, 201, 241);
                     string folder = null;
                     try
                     {
+                        bool containsColor = !string.IsNullOrWhiteSpace(item.Groups[5].Value);
+                        bool containsFolder = !string.IsNullOrWhiteSpace(item.Groups[6].Value);
+
                         value2 = double.Parse(item.Groups[2].Value, CultureInfo.InvariantCulture);
                         value2 = Math.Round(value2, 2);
                         value3 = double.Parse(item.Groups[3].Value, CultureInfo.InvariantCulture);
@@ -653,7 +640,7 @@ namespace GpsFolders
                     (endIndex = gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, maxTagLength), compareType)) > startIndex)
                 {
                     string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
-                    if (tag.Length >= minTagLength && tag.Length <= maxTagLength)
+                    if (tag.Length >= minTagLength && tag.Length <= maxTagLength && !tag.EndsWith("GPS"))
                     {
                         return tag;
                     }

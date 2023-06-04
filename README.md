@@ -1,6 +1,7 @@
 # SE-GpsFolders
 #### Adding gpses to a folder
-Write `<Folder>` at the beginning of the description, followed by the desired folder name, followed by a `</Folder>` tag. The folder name must be between 1 and 32 characters long.
+Write `<Folder>` at the beginning of the description, followed by the desired folder name, followed by a `</Folder>` tag.
+The folder name must be between 1 and 32 characters long and may not contain ":" or any newline characters (\r and \n)
 
 Example:
 
