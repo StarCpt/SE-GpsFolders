@@ -15,3 +15,6 @@ Example Custom GPS String:
 
 #### Show/Hide folder on hud
 ![Screenshot 2023-05-29 002144](https://github.com/StarCpt/SE-GpsFolders/assets/86216339/8abb1812-add0-4999-9889-3b1201487dda)
+
+#### Display GPS Distances
+![image](https://github.com/StarCpt/SE-GpsFolders/assets/86216339/bde1f621-76c0-40e7-9863-1513eca80df9)
