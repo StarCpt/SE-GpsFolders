@@ -96,10 +96,11 @@ namespace GpsFolders
             {
                 MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel()
                 {
-                    Position = new Vector2(-0.295f, -0.267f),
+                    Position = new Vector2(-0.196f, -0.267f + 0.011f),
                     Name = "ExpandFoldersLabel",
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
                     Text = MyTexts.GetString("Expand Folders"),
+                    TextScale = 0.7f,
                 };
                 gpsPage.Controls.Add(expandFoldersLabel);
 
@@ -163,7 +164,7 @@ namespace GpsFolders
         static MyGuiControlButton m_showFolderOnHudButton;
         static MyGuiControlButton m_hideFolderOnHudButton;
 
-        static void PopulateList(object instance, string searchString) => populateListMethod.Invoke(instance, new object[] { searchString });
+        public static void PopulateList(object instance, string searchString) => populateListMethod.Invoke(instance, new object[] { searchString });
 
         [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Init", MethodType.Normal)]
         [HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]

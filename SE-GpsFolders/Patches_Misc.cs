@@ -18,6 +18,25 @@ namespace GpsFolders
 {
     static class MiscellaneousPatches
     {
+        static MyGuiControlCheckbox m_showDistanceColumnCheckbox;
+        static bool showDistanceColumn = false;
+
+        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Init", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]
+        static class MyTerminalGpsController_Init
+        {
+            static void Postfix(object __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlTable ___m_tableIns)
+            {
+                (m_showDistanceColumnCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ShowDistanceCheckbox")).IsCheckedChanged += delegate
+                {
+                    showDistanceColumn = !showDistanceColumn;
+                    ___m_tableIns.SetColumnVisibility(1, showDistanceColumn);
+                    ___m_tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
+                    ___m_tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
+                };
+            }
+        }
+
         [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "PopulateList", MethodType.Normal)]
         [HarmonyPatch(new Type[] { typeof(string) })]
         static class MyTerminalGpsController_PopulateList
@@ -33,7 +52,9 @@ namespace GpsFolders
                 {
                     if (!(row is NonGpsRow) && row.UserData is MyGps gps)
                     {
-                        row.GetCell(0).ToolTip.AddToolTip($"Distance: {Helpers.GetDistanceString(Vector3D.Distance(myPos, gps.Coords))}");
+                        double dist = Vector3D.Distance(myPos, gps.Coords);
+                        row.GetCell(0).ToolTip.AddToolTip($"Distance: {Helpers.GetDistanceString(dist)}");
+                        row.AddCell(new MyGuiControlTable.Cell(Helpers.GetDistanceStringShort(dist), null, $"Distance: {Helpers.GetDistanceString(dist)}"));
                     }
                 }
             }
@@ -64,6 +85,34 @@ namespace GpsFolders
                 copyAllGpsesButton.SetToolTip("Copy ALL gpses to clipboard");
                 copyAllGpsesButton.ButtonClicked += (source) => Helpers.ShowConfirmationDialog("Copy all gpses!", "Are you sure you want to copy ALL of your gpses to clipboard?", CopyAllGpsesToClipboardDialogCallback);
                 gpsPage.Controls.Add(copyAllGpsesButton);
+
+                MyGuiControlTable tableIns = (MyGuiControlTable)gpsPage.Controls.GetControlByName("TableINS");
+                tableIns.ColumnsCount = 2;
+                tableIns.SetCustomColumnWidths(new float[2] { 0.75f, 0.25f });
+                tableIns.SetColumnAlign(1, MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER);
+                tableIns.SetColumnVisibility(1, showDistanceColumn);
+                tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
+                tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
+
+                MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel
+                {
+                    Position = new Vector2(-0.321f, -0.267f + 0.011f),
+                    Name = "ShowDistanceLabel",
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
+                    Text = MyTexts.GetString("Dist"),
+                    TextScale = 0.7f,
+                };
+                gpsPage.Controls.Add(expandFoldersLabel);
+
+                MyGuiControlCheckbox expandFoldersCheckbox = new MyGuiControlCheckbox
+                {
+                    Position = new Vector2(-0.316f, -0.277f),
+                    Name = "ShowDistanceCheckbox",
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+                    IsChecked = showDistanceColumn,
+                };
+                expandFoldersCheckbox.SetToolTip(new MyToolTips("Show Distance Column"));
+                gpsPage.Controls.Add(expandFoldersCheckbox);
             }
 
             private static void CopyAllGpsesToClipboardDialogCallback(MyGuiScreenMessageBox.ResultEnum result)
@@ -114,6 +163,16 @@ namespace GpsFolders
                 return $"{meters / 1000:0.00} km";
             else
                 return $"{meters:0.0} m";
+        }
+
+        public static string GetDistanceStringShort(double meters)
+        {
+            if (meters >= 1000000)
+                return $"{meters / 1000000:0}kkm";
+            else if (meters >= 1000)
+                return $"{meters / 1000:0}km";
+            else
+                return $"{meters:0}m";
         }
 
         public static void ShowConfirmationDialog(string caption, string text, Action<MyGuiScreenMessageBox.ResultEnum> callback)
