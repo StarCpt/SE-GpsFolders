@@ -488,19 +488,16 @@ namespace GpsFolders
                 if (___m_tableIns.SelectedRow is GpsFolderRow folder)
                 {
                     StringBuilder gpses = new StringBuilder();
-                    for (int i = 0; i < folder.FolderSubRows.Count;)
+                    foreach (var row in folder.FolderSubRows)
                     {
-                        gpses.Append(((MyGps)folder.FolderSubRows[i].UserData).ToString())
+                        gpses.Append(((MyGps)row.UserData).ToString())
                              .Append(folder.Name)
-                             .Append(":");
-
-                        i++;
-                        if (i == folder.FolderSubRows.Count - 1)
-                            gpses.AppendLine();
+                             .AppendLine(":");
                     }
 
                     if (gpses.Length > 0)
                     {
+                        gpses.Length--;
                         MyVRage.Platform.System.Clipboard = gpses.ToString();
                     }
 
@@ -532,12 +529,10 @@ namespace GpsFolders
                         gpsesToDelete.Add((MyGps)row.UserData);
                     }
 
-                    var confirmationDialog = MyGuiSandbox.CreateMessageBox(
-                        MyMessageBoxStyleEnum.Info,
-                        MyMessageBoxButtonsType.YES_NO,
-                        new StringBuilder("Are you sure you want to delete this folder and its content?"),
-                        new StringBuilder("Delete Folder"),
-                        callback: result =>
+                    Helpers.ShowConfirmationDialog(
+                        "Delete Folder",
+                        "Are you sure you want to delete this folder and its content?",
+                        result =>
                         {
                             if (result == MyGuiScreenMessageBox.ResultEnum.YES)
                             {
@@ -547,7 +542,6 @@ namespace GpsFolders
                                 }
                             }
                         });
-                    MyGuiSandbox.AddScreen(confirmationDialog);
 
                     return false;
                 }
@@ -658,23 +652,29 @@ namespace GpsFolders
         {
             if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {
-                const string startTag = @"<Folder>";
-                const string endTag = @"</Folder>";
-                const int startIndex = 8;
-                const int minTagLength = 1;
-                const int maxTagLength = 32;
-                int endIndex;
-                var compareType = StringComparison.CurrentCulture;
+                return GetFolderTag(gps);
+            }
+            return null;
+        }
 
-                if (gps.Description != null &&
+        public static string GetFolderTag(this MyGps gps)
+        {
+            const string startTag = @"<Folder>";
+            const string endTag = @"</Folder>";
+            const int startIndex = 8;
+            const int minTagLength = 1;
+            const int maxTagLength = 32;
+            int endIndex;
+            var compareType = StringComparison.CurrentCulture;
+
+            if (gps.Description != null &&
                     gps.Description.StartsWith(startTag, compareType) &&
                     (endIndex = gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength), compareType)) > startIndex)
+            {
+                string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
+                if (IsFolderNameValid(tag))
                 {
-                    string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
-                    if (IsFolderNameValid(tag))
-                    {
-                        return tag;
-                    }
+                    return tag;
                 }
             }
             return null;
