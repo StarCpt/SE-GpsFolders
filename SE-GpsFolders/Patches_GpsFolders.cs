@@ -321,7 +321,7 @@ namespace GpsFolders
 
                     if (sender.SelectedRow is GpsFolderRow)
                     {
-                        ___m_panelInsName.Enabled = true;
+                        ___m_panelInsName.Enabled = string.IsNullOrWhiteSpace(___m_searchBox.SearchText);
                         ___m_buttonCopy.Enabled = true;
 
                         if (m_showFolderOnHudButton != null)
