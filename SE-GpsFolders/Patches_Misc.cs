@@ -30,7 +30,7 @@ namespace GpsFolders
                 (m_showDistanceColumnCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ShowDistanceCheckbox")).IsCheckedChanged += delegate
                 {
                     showDistanceColumn = !showDistanceColumn;
-                    //___m_tableIns.SetColumnVisibility(1, showDistanceColumn);
+                    ___m_tableIns.SetColumnVisibility(1, showDistanceColumn);
                     ___m_tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
                     ___m_tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
                 };
@@ -90,7 +90,7 @@ namespace GpsFolders
                 tableIns.ColumnsCount = 2;
                 tableIns.SetCustomColumnWidths(new float[2] { 0.75f, 0.25f });
                 tableIns.SetColumnAlign(1, MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER);
-                //tableIns.SetColumnVisibility(1, showDistanceColumn);
+                tableIns.SetColumnVisibility(1, showDistanceColumn);
                 tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
                 tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
 
