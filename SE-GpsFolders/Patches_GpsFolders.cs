@@ -146,6 +146,40 @@ namespace GpsFolders
                 hideFolderOnHudButton.Size = showFolderOnHudButton.Size;
                 hideFolderOnHudButton.SetToolTip("Hide all entries in the folder from HUD");
                 gpsPage.Controls.Add(hideFolderOnHudButton);
+
+                MyGuiControlLabel gpsDescriptionLabel = (MyGuiControlLabel)gpsPage.GetControlByName("labelInsDesc");
+                MyGuiControlMultilineEditableText gpsDescriptionText = (MyGuiControlMultilineEditableText)gpsPage.GetControlByName("textInsDesc");
+
+                MyGuiControlLabel gpsFolderLabel = new MyGuiControlLabel(
+                    gpsDescriptionLabel.Position,
+                    new Vector2(0.4f, 0.035f),
+                    null,
+                    null,
+                    0.8f,
+                    "Blue",
+                    MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
+                {
+                    Name = "GpsFolderNameLabel",
+                    Text = "Folder Name",
+                };
+                gpsFolderLabel.PositionY -= gpsFolderLabel.Size.Y * 0.25f;
+                gpsPage.Controls.Add(gpsFolderLabel);
+
+                MyGuiControlTextbox gpsFolderTextBox = new MyGuiControlTextbox(null, null, 32)
+                {
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+                    Position = gpsDescriptionText.Position,
+                    Size = new Vector2(0.58f, 0.035f),
+                    Name = "GpsFolderNameTextBox"
+                };
+                gpsFolderTextBox.PositionY -= gpsFolderLabel.Size.Y * 0.25f;
+                gpsFolderTextBox.Enabled = false;
+                gpsPage.Controls.Add(gpsFolderTextBox);
+
+                float offset = gpsFolderLabel.Size.Y * 0.5f + gpsFolderTextBox.Size.Y + 0.03f;
+                gpsDescriptionLabel.PositionY += offset;
+                gpsDescriptionText.PositionY += offset;
+                gpsDescriptionText.Size = new Vector2(gpsDescriptionText.Size.X, gpsDescriptionText.Size.Y - offset);
             }
         }
     }
@@ -163,6 +197,7 @@ namespace GpsFolders
         static MyGuiControlCheckbox m_expandFoldersCheckbox;
         static MyGuiControlButton m_showFolderOnHudButton;
         static MyGuiControlButton m_hideFolderOnHudButton;
+        static MyGuiControlTextbox m_gpsFolderNameTextBox;
 
         public static void PopulateList(object instance, string searchString) => populateListMethod.Invoke(instance, new object[] { searchString });
 
@@ -203,6 +238,12 @@ namespace GpsFolders
                         }
                     }
                 };
+
+                (m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox")).TextChanged += textbox =>
+                {
+                    ___m_tableIns.SelectedRow?.SetFolderTag(textbox.Text);
+                };
+                m_gpsFolderNameTextBox.Enabled = false;
             }
         }
 
@@ -216,8 +257,8 @@ namespace GpsFolders
                 for (int i = 0; i < ___m_tableIns.RowsCount; i++)
                 {
                     var row = ___m_tableIns.Rows[i];
-                    string folderTag = row.GetFolderTag();
-                    if (folderTag != null)
+                    string folderTag;
+                    if (row.TryGetFolderTag(out folderTag))
                     {
                         if (!rowDict.ContainsKey(folderTag))
                         {
@@ -319,6 +360,12 @@ namespace GpsFolders
                     ___m_checkInsShowOnHud.Enabled = false;
                     ___m_checkInsAlwaysVisible.Enabled = false;
 
+                    if (m_gpsFolderNameTextBox != null)
+                    {
+                        m_gpsFolderNameTextBox.Enabled = false;
+                        m_gpsFolderNameTextBox.Text = "";
+                    }
+
                     if (sender.SelectedRow is GpsFolderRow)
                     {
                         ___m_panelInsName.Enabled = string.IsNullOrWhiteSpace(___m_searchBox.SearchText);
@@ -349,7 +396,25 @@ namespace GpsFolders
                         m_showFolderOnHudButton.Enabled = false;
                     if (m_hideFolderOnHudButton != null)
                         m_hideFolderOnHudButton.Enabled = false;
+                    if (m_gpsFolderNameTextBox != null)
+                    {
+                        if (sender.SelectedRow != null && sender.SelectedRow.TryGetFolderTag(out string tag))
+                            m_gpsFolderNameTextBox.Text = tag;
+                        else
+                            m_gpsFolderNameTextBox.Text = "";
+                    }
                 }
+            }
+        }
+
+        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "EnableEditBoxes", MethodType.Normal)]
+        [HarmonyPatch(new Type[] { typeof(bool) })]
+        static class Patch_EnableEditBoxes
+        {
+            static void Postfix(bool enable)
+            {
+                if (m_gpsFolderNameTextBox != null)
+                    m_gpsFolderNameTextBox.Enabled = enable;
             }
         }
 
@@ -504,7 +569,7 @@ namespace GpsFolders
 
                     return false;
                 }
-                else if (___m_tableIns.SelectedRow.GetFolderTag() is string tag)
+                else if (___m_tableIns.SelectedRow.TryGetFolderTag(out string tag))
                 {
                     MyVRage.Platform.System.Clipboard = ___m_tableIns.SelectedRow.UserData.ToString() + tag + ':';
                     return false;
@@ -643,19 +708,24 @@ namespace GpsFolders
 
     public static class Extensions
     {
+        const int minTagLength = 1;
+        const int maxTagLength = 32;
+
         public static MyGuiHighlightTexture SetSize(this MyGuiHighlightTexture texture, Vector2 size)
         {
             texture.SizePx = size;
             return texture;
         }
 
-        public static string GetFolderTag(this MyGuiControlTable.Row row)
+        public static bool TryGetFolderTag(this MyGuiControlTable.Row row, out string tag)
         {
             if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {
-                return GetFolderTag(gps);
+                tag = GetFolderTag(gps);
+                return tag != null;
             }
-            return null;
+            tag = null;
+            return false;
         }
 
         public static string GetFolderTag(this MyGps gps)
@@ -663,8 +733,6 @@ namespace GpsFolders
             const string startTag = @"<Folder>";
             const string endTag = @"</Folder>";
             const int startIndex = 8;
-            const int minTagLength = 1;
-            const int maxTagLength = 32;
             int endIndex;
             var compareType = StringComparison.CurrentCulture;
 
@@ -683,11 +751,7 @@ namespace GpsFolders
 
         public static void SetFolderTag(this MyGuiControlTable.Row row, string tag)
         {
-            const int minTagLength = 1;
-            const int maxTagLength = 32;
-
-            if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps &&
-                IsFolderNameValid(tag))
+            if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps && tag != null && (IsFolderNameValid(tag) || string.IsNullOrWhiteSpace(tag)))
             {
                 const string startTag = @"<Folder>";
                 const string endTag = @"</Folder>";
@@ -702,7 +766,11 @@ namespace GpsFolders
                     gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
                 }
 
-                gps.Description = startTag + tag + endTag + gps.Description;
+                if (IsFolderNameValid(tag))
+                {
+                    gps.Description = startTag + tag + endTag + gps.Description;
+                }
+
                 MySession.Static.Gpss.SendModifyGpsRequest(MySession.Static.LocalPlayerId, gps);
             }
         }
@@ -710,9 +778,10 @@ namespace GpsFolders
         public static bool IsFolderNameValid(string folderName)
         {
             return !string.IsNullOrWhiteSpace(folderName) &&
-                folderName.Length >= 1 &&
-                folderName.Length <= 32 &&
-                !folderName.EndsWith("GPS");
+                folderName.Length >= minTagLength &&
+                folderName.Length <= maxTagLength &&
+                !folderName.EndsWith("GPS") &&
+                !folderName.Contains(":");
         }
     }
 }
