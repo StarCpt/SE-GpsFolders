@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{2A6EA0FD-BF34-4C11-BB99-FD43F16C6518}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>GpsFoldersPlugin</RootNamespace>
+    <RootNamespace>GpsFolders</RootNamespace>
     <AssemblyName>GpsFolders</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <LangVersion>7.3</LangVersion>
@@ -15,7 +15,7 @@
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -112,6 +112,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions.cs" />
     <Compile Include="Patches_GpsFolders.cs" />
     <Compile Include="Patches_Misc.cs" />
     <Compile Include="Program.cs" />
