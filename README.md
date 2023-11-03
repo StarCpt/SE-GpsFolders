@@ -1,7 +1,5 @@
 # SE-GpsFolders
-#### Adding gpses to a folder
-Write `<Folder>` at the beginning of the description, followed by the desired folder name, followed by a `</Folder>` tag.
-The folder name must be between 1 and 32 characters long and may not contain ":" or any newline characters (\r and \n)
+Adds folders to the gps tab.
 
 This plugin may not be compatible with other mods or plugins that modify gps descriptions.
 
@@ -11,6 +9,8 @@ GPS Distance Helper (https://steamcommunity.com/workshop/filedetails/?id=1223617
 ## Usage:
 
 #### Folder Name
+The folder name must be between 1 and 32 characters long and may not contain ":", "GPS" or any newline characters (\r and \n)
+
 Edit the "Folder Name" textbox to set the folder.  
 Changing the tag in the description will work, but is not recommended.  
 ![Annotation 2023-11-02 202813](https://github.com/StarCpt/SE-GpsFolders/assets/86216339/68c18125-722d-4619-8043-461ce9cc30e5)
