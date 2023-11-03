@@ -3,6 +3,8 @@
 Write `<Folder>` at the beginning of the description, followed by the desired folder name, followed by a `</Folder>` tag.
 The folder name must be between 1 and 32 characters long and may not contain ":" or any newline characters (\r and \n)
 
+Note: This plugin may not be compatible with other mods or plugins that modify gps descriptions.
+
 Example:
 
 ![Screenshot 2023-05-29 001227](https://github.com/StarCpt/SE-GpsFolders/assets/86216339/17472c29-f51d-4102-8b00-8af9dea3f3bb)
