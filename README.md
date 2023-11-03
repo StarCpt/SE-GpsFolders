@@ -3,7 +3,10 @@
 Write `<Folder>` at the beginning of the description, followed by the desired folder name, followed by a `</Folder>` tag.
 The folder name must be between 1 and 32 characters long and may not contain ":" or any newline characters (\r and \n)
 
-Note: This plugin may not be compatible with other mods or plugins that modify gps descriptions.
+This plugin may not be compatible with other mods or plugins that modify gps descriptions.
+
+Incompatible plugins/mods (non-exhaustive):
+GPS Distance Helper (https://steamcommunity.com/workshop/filedetails/?id=1223617082) and all forks of the mod.
 
 Example:
 
