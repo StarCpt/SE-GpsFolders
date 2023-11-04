@@ -56,7 +56,7 @@ namespace GpsFolders
 
         public static void SetFolderTag(this MyGuiControlTable.Row row, string tag)
         {
-            if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps && tag != null && (IsFolderNameValid(tag) || string.IsNullOrWhiteSpace(tag)))
+            if (row != null && !(row.UserData is NonGpsRow) && !(row.UserData is GpsFolderRow) && row.UserData is MyGps gps && tag != null && (IsFolderNameValid(tag) || string.IsNullOrWhiteSpace(tag)))
             {
                 const string startTag = @"<Folder>";
                 const string endTag = @"</Folder>";

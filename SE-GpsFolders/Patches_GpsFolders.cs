@@ -496,7 +496,7 @@ namespace GpsFolders
 
         [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "OnNameChanged", MethodType.Normal)]
         [HarmonyPatch(new Type[] { typeof(MyGuiControlTextbox) })]
-        static class Patch_OnNameChanged
+        static class Patch_OnNameChanged // called when the gps name field changes
         {
             static bool Prefix(MyGuiControlTextbox sender, MyGuiControlTable ___m_tableIns)
             {
@@ -508,9 +508,13 @@ namespace GpsFolders
 
                 if (selectedRow is GpsFolderRow folder && Extensions.IsFolderNameValid(sender.Text))
                 {
+                    string oldName = folder.Name;
                     folder.SetName(sender.Text);
-                    folder.DisplayName = '…' + folder.Name;
-                    currentFolderName = folder.Name;
+                    if (currentFolderName == oldName)
+                    {
+                        folder.DisplayName = '…' + folder.Name;
+                        currentFolderName = folder.Name;
+                    }
                     ___m_tableIns.SelectedRow = selectedRow;
                     ___m_tableIns.ScrollToSelection();
                 }
@@ -535,7 +539,14 @@ namespace GpsFolders
                         i--;
                         if (row is GpsFolderRow folder)
                         {
-                            folderDict.Add(folder.Name, folder);
+                            if (!folderDict.ContainsKey(folder.Name))
+                            {
+                                folderDict.Add(folder.Name, folder);
+                            }
+                            else
+                            {
+                                folderDict[folder.Name].FolderSubRows.AddRange(folder.FolderSubRows);
+                            }
                         }
                     }
                 }
