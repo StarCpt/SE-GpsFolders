@@ -1,5 +1,4 @@
-﻿using GpsFolders;
-using GpsFolders.Rows;
+﻿using GpsFolders.Rows;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
@@ -14,8 +13,16 @@ namespace GpsFolders
 {
     public static class Extensions
     {
-        const int minTagLength = 1;
-        const int maxTagLength = 32;
+        private const int minTagLength = 1;
+        private const int maxTagLength = 32;
+
+        private const string startTagOld = @"<Folder>";
+        private const string endTagOld = @"</Folder>";
+        private static readonly int startIndexOld = startTagOld.Length;
+
+        private const string startTag = @"f:";
+        private const string endTag = "\n";
+        private static readonly int startIndex = startTag.Length;
 
         public static MyGuiHighlightTexture SetSize(this MyGuiHighlightTexture texture, Vector2 size)
         {
@@ -35,21 +42,36 @@ namespace GpsFolders
 
         public static bool TryGetFolderId(this MyGps gps, out string folder)
         {
-            return (folder = gps.GetFolderId()) != null;
+            if ((folder = gps.GetFolderId()) != null)
+                return true;
+            return (folder = gps.GetFolderIdOld()) != null;
+        }
+
+        public static string GetFolderIdOld(this MyGps gps)
+        {
+            int endIndex;
+            if (gps.Description != null &&
+                gps.Description.StartsWith(startTagOld) &&
+                (endIndex = gps.Description.IndexOf(endTagOld, startIndexOld, Math.Min(gps.Description.Length - startIndexOld, startIndexOld + maxTagLength + 1))) > startIndexOld)
+            {
+                string tag = gps.Description.Substring(startIndexOld, endIndex - startIndexOld);
+                if (IsFolderIdValid(tag))
+                {
+                    return tag;
+                }
+            }
+            return null;
         }
 
         public static string GetFolderId(this MyGps gps)
         {
-            const string startTag = @"<Folder>";
-            const string endTag = @"</Folder>";
-            const int startIndex = 8;
-            int endIndex;
-            var compareType = StringComparison.CurrentCulture;
-
             if (gps.Description != null &&
-                    gps.Description.StartsWith(startTag, compareType) &&
-                    (endIndex = gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1), compareType)) > startIndex)
+                gps.Description.StartsWith(startTag))
             {
+                int endIndex =
+                    gps.Description.Contains('\n') ?
+                    gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
+                    gps.Description.Length;
                 string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
                 if (IsFolderIdValid(tag))
                 {
@@ -71,17 +93,27 @@ namespace GpsFolders
         {
             if (id != null && (IsFolderIdValid(id) || string.IsNullOrWhiteSpace(id)))
             {
-                const string startTag = @"<Folder>";
-                const string endTag = @"</Folder>";
-                const int startIndex = 8;
-                int endIndex;
-                var compareType = StringComparison.CurrentCulture;
-
-                if (gps.Description != null &&
-                    gps.Description.StartsWith(startTag, compareType) &&
-                    (endIndex = gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1), compareType)) > startIndex)
+                if (gps.Description != null)
                 {
-                    gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
+                    if (gps.Description.StartsWith(startTag))
+                    {
+                        int endIndex =
+                            gps.Description.Contains(endTag) ?
+                            gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
+                            gps.Description.Length;
+                        if (endIndex > startIndex)
+                        {
+                            gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
+                        }
+                    }
+                    else if (gps.Description.StartsWith(startTagOld))
+                    {
+                        int endIndex  = gps.Description.IndexOf(endTagOld, startIndexOld, Math.Min(gps.Description.Length - startIndexOld, startIndexOld + maxTagLength + 1));
+                        if (endIndex > startIndexOld)
+                        {
+                            gps.Description = gps.Description.Remove(0, endIndex + endTagOld.Length);
+                        }
+                    }
                 }
 
                 if (IsFolderIdValid(id))

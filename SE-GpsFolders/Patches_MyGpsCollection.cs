@@ -65,7 +65,7 @@ namespace GpsFolders
                     MyGps gps = new MyGps
                     {
                         Name = value,
-                        Description = (folder != null ? $"<Folder>{folder}</Folder>\n{desc}" : desc),
+                        Description = (folder != null ? $"f:{folder}\n{desc}" : desc),
                         Coords = new Vector3D(value2, value3, value4),
                         GPSColor = gPSColor,
                         ShowOnHud = false
