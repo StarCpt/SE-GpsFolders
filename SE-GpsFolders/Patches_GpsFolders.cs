@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using GpsFolders.Rows;
+using HarmonyLib;
 using Sandbox.Game;
 using Sandbox.Game.Gui;
 using Sandbox.Game.Multiplayer;
@@ -22,89 +23,6 @@ using VRageMath;
 
 namespace GpsFolders
 {
-    abstract class NonGpsRow : MyGuiControlTable.Row
-    {
-        public string Name { get; protected set; }
-        public string DisplayName
-        {
-            get => _displayName;
-            set
-            {
-                if (_displayName != value)
-                {
-                    _displayName = value;
-                    _cell.Text.Clear().Append(value);
-                    _dummyGps.DisplayName = value;
-                }
-            }
-        }
-        public MyGuiHighlightTexture? Icon
-        {
-            get => _cell.Icon;
-            set => _cell.Icon = value;
-        }
-
-        private string _displayName;
-        protected MyGps _dummyGps;
-        protected MyGuiControlTable.Cell _cell;
-
-        protected NonGpsRow(string name, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null) : base(
-            new MyGps
-            {
-                Name = name,
-                DisplayName = displayName,
-                Description = "",
-                IsLocal = true,
-                AlwaysVisible = false,
-                ShowOnHud = true,
-                Coords = Vector3D.Zero,
-                DiscardAt = null,
-                GPSColor = color,
-            }, toolTip)
-        {
-            this.Name = name;
-            this._displayName = displayName;
-            this._dummyGps = (MyGps)this.UserData;
-            this._cell = new MyGuiControlTable.Cell(
-                this.DisplayName,
-                this.UserData,
-                toolTip,
-                color,
-                icon,
-                MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_CENTER);
-            this.AddCell(_cell);
-        }
-    }
-    class GpsFolderRow : NonGpsRow
-    {
-        public List<MyGuiControlTable.Row> FolderSubRows;//gpses that would be visible if folders were expanded. takes the search string into account
-
-        public GpsFolderRow(string folderName, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null)
-            : base(folderName, displayName, color, icon, toolTip)
-        {
-            FolderSubRows = new List<MyGuiControlTable.Row>();
-        }
-
-        public void SetName(string name)
-        {
-            foreach (var row in FolderSubRows)
-            {
-                row.SetFolderId(name);
-            }
-            this.Name = name;
-            _dummyGps.Name = name;
-        }
-    }
-
-    class GpsSeparatorRow : NonGpsRow
-    {
-        public GpsSeparatorRow(string name, string displayName, Color color, string toolTip = null)
-            : base(name, displayName, color, null, toolTip)
-        {
-
-        }
-    }
-
     static class MyGuiScreenTerminalPatches
     {
         [HarmonyPatch(typeof(MyGuiScreenTerminal), "CreateGpsPageControls", MethodType.Normal)]
@@ -250,6 +168,10 @@ namespace GpsFolders
                     {
                         Helpers.SetFolderShowOnHud(folder.Name, true);
                     }
+                    else if (___m_tableIns.SelectedRow is UnsortedGpsFolderRow separator)
+                    {
+                        Helpers.SetUnsortedFolderShowOnHud(true);
+                    }
                 };
 
                 (m_hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton")).ButtonClicked += delegate
@@ -257,6 +179,10 @@ namespace GpsFolders
                     if (___m_tableIns.SelectedRow is GpsFolderRow folder)
                     {
                         Helpers.SetFolderShowOnHud(folder.Name, false);
+                    }
+                    else if (___m_tableIns.SelectedRow is UnsortedGpsFolderRow separator)
+                    {
+                        Helpers.SetUnsortedFolderShowOnHud(false);
                     }
                 };
 
@@ -325,25 +251,21 @@ namespace GpsFolders
 
                 void EnableEditBoxes(bool enable)
                 {
-                    //MyAPIGateway.Utilities.ShowMessage("gpsfolders", "placeholder invoked (EnableEditBoxes)");
                     _enableEditBoxesMethod.Invoke(__instance, new object[] { enable });
                 }
 
                 void SetDeleteButtonEnabled(bool enabled)
                 {
-                    //MyAPIGateway.Utilities.ShowMessage("gpsfolders", "placeholder invoked (SetDeleteButtonEnabled)");
                     _setDeleteButtonEnabledMethod.Invoke(__instance, new object[] { enabled });
                 }
 
                 void FillRight()
                 {
-                    //MyAPIGateway.Utilities.ShowMessage("gpsfolders", "placeholder invoked (FillRight)");
                     _fillRightMethod2.Invoke(__instance, null);
                 }
 
                 void FillRight2(MyGps ins)
                 {
-                    //MyAPIGateway.Utilities.ShowMessage("gpsfolders", "placeholder invoked (FillRight2)");
                     _fillRightMethod.Invoke(__instance, new object[] { ins });
                 }
             }
@@ -402,13 +324,13 @@ namespace GpsFolders
                         m_showFolderOnHudButton?.SetEnabled(true);
                         m_hideFolderOnHudButton?.SetEnabled(true);
                     }
-                    else if (sender.SelectedRow is GpsSeparatorRow)
+                    else if (sender.SelectedRow is UnsortedGpsFolderRow)
                     {
                         ___m_panelInsName.Enabled = false;
-                        ___m_buttonCopy.Enabled = false;
+                        ___m_buttonCopy.Enabled = true;
 
-                        m_showFolderOnHudButton?.SetEnabled(false);
-                        m_hideFolderOnHudButton?.SetEnabled(false);
+                        m_showFolderOnHudButton?.SetEnabled(true);
+                        m_hideFolderOnHudButton?.SetEnabled(true);
                     }
                 }
                 else
@@ -524,6 +446,11 @@ namespace GpsFolders
                     Helpers.CopyFolderToClipboard(folder.Name);
                     return false;
                 }
+                if (___m_tableIns.SelectedRow is UnsortedGpsFolderRow unsorted)
+                {
+                    Helpers.CopyUnsortedGpsesToClipboard();
+                    return false;
+                }
                 else if (___m_tableIns.SelectedRow.TryGetFolderId(out string tag))
                 {
                     MyVRage.Platform.System.Clipboard = ___m_tableIns.SelectedRow.UserData.ToString() + tag + ':';
@@ -576,76 +503,5 @@ namespace GpsFolders
         //{
         //
         //}
-    }
-
-    static class MyGpsCollectionPatches
-    {
-        [HarmonyPatch(typeof(MyGpsCollection), "ScanText", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(string), typeof(string) })]
-        static class Patch_ScanText
-        {
-            static readonly int PARSE_MAX_COUNT = 100;
-            static readonly string m_UnifiedScanPattern = @"GPS:([^:]{0,32}):([\d\.-]*):([\d\.-]*):([\d\.-]*):?(#[A-Fa-f0-9]{6}(?:[A-Fa-f0-9]{2})?)?:([^\r\n]{0,32}?):?(?=[^:]*GPS:|[^:]*$)";
-
-            static bool Prefix(string input, string desc, ref int __result)
-            {
-                int num = 0;
-                MatchCollection matchCollection = Regex.Matches(input, m_UnifiedScanPattern);
-
-                foreach (Match item in matchCollection)
-                {
-                    string value = item.Groups[1].Value;
-                    double value2;
-                    double value3;
-                    double value4;
-
-                    Color gPSColor = new Color(117, 201, 241);
-                    string folder = null;
-                    try
-                    {
-                        bool containsColor = !string.IsNullOrWhiteSpace(item.Groups[5].Value);
-                        bool containsFolder = !string.IsNullOrWhiteSpace(item.Groups[6].Value);
-
-                        value2 = double.Parse(item.Groups[2].Value, CultureInfo.InvariantCulture);
-                        value2 = Math.Round(value2, 2);
-                        value3 = double.Parse(item.Groups[3].Value, CultureInfo.InvariantCulture);
-                        value3 = Math.Round(value3, 2);
-                        value4 = double.Parse(item.Groups[4].Value, CultureInfo.InvariantCulture);
-                        value4 = Math.Round(value4, 2);
-                        if (containsColor)
-                        {
-                            gPSColor = new ColorDefinitionRGBA(item.Groups[5].Value);
-                        }
-                        if (containsFolder)
-                        {
-                            folder = item.Groups[6].Value;
-                        }
-                    }
-                    catch (SystemException)
-                    {
-                        continue;
-                    }
-
-                    MyGps gps = new MyGps
-                    {
-                        Name = value,
-                        Description = (folder!= null ? $"<Folder>{folder}</Folder>\n{desc}" : desc),
-                        Coords = new Vector3D(value2, value3, value4),
-                        GPSColor = gPSColor,
-                        ShowOnHud = false
-                    };
-                    gps.UpdateHash();
-                    MySession.Static.Gpss.SendAddGpsRequest(MySession.Static.LocalPlayerId, ref gps, 0L);
-                    num++;
-                    if (num == PARSE_MAX_COUNT)
-                    {
-                        __result = num;
-                    }
-                }
-
-                __result = num;
-                return false;
-            }
-        }
     }
 }

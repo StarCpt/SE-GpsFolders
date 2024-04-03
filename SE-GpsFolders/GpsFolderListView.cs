@@ -1,4 +1,5 @@
-﻿using Sandbox.Game.Screens.Helpers;
+﻿using GpsFolders.Rows;
+using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
 using Sandbox.ModAPI;
@@ -15,6 +16,8 @@ namespace GpsFolders
 {
     public class GpsFolderListView
     {
+        public const string MISC_GPS_SEPARATOR_NAME = "--------------------------------------------------";
+
         public string LastSearchText { get; private set; }
 
         private List<MyGps> _allGpses;
@@ -162,9 +165,11 @@ namespace GpsFolders
                     }
                 }
 
-                if (matchAny || searchEmpty)
+                if ((matchAny || searchEmpty) && folderIndex > 0)
                 {
-                    AddFolderRow(_unsortedFolder, folderIndex);
+                    //AddFolderRow(_unsortedFolder, folderIndex);
+                    string toolTip = $"Unsorted Items\n{_unsortedFolder.Entries.Count} Item{(_unsortedFolder.Entries.Count != 1 ? "s" : "")}";
+                    items.Insert(folderIndex, new UnsortedGpsFolderRow("", MISC_GPS_SEPARATOR_NAME, Color.Yellow, toolTip));
                 }
             }
 
@@ -172,7 +177,8 @@ namespace GpsFolders
 
             void AddFolderRow(FolderEntry folder, int index)
             {
-                items.Insert(index, new GpsFolderRow(folder.FolderId, folder.DisplayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL));
+                string toolTip = $"{folder.Entries.Count} Item{(folder.Entries.Count != 1 ? "s" : "")}";
+                items.Insert(index, new GpsFolderRow(folder.FolderId, folder.DisplayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, toolTip));
             }
 
             void AddGpsRow(MyGps gps)

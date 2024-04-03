@@ -117,8 +117,12 @@
     <Compile Include="Helpers.cs" />
     <Compile Include="Patches_GpsFolders.cs" />
     <Compile Include="Patches_Misc.cs" />
+    <Compile Include="Patches_MyGpsCollection.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Rows\GpsFolderRow.cs" />
+    <Compile Include="Rows\NonGpsRow.cs" />
+    <Compile Include="Rows\UnsortedGpsFolderRow.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

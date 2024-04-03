@@ -13,6 +13,7 @@ using VRage.Game;
 using VRage.Utils;
 using VRage;
 using VRageMath;
+using GpsFolders.Rows;
 
 namespace GpsFolders
 {

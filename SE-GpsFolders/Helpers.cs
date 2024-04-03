@@ -78,6 +78,16 @@ namespace GpsFolders
             }
         }
 
+        public static void SetUnsortedFolderShowOnHud(bool showOnHud)
+        {
+            var gpses = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => !i.Value.TryGetFolderId(out _)).Select(i => i.Value);
+            foreach (MyGps gps in gpses)
+            {
+                gps.ShowOnHud = showOnHud;
+                MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
+            }
+        }
+
         public static void CopyFolderToClipboard(string folderId)
         {
             if (!TryGetFolderGpses(folderId, out IEnumerable<MyGps> gpses))
@@ -86,6 +96,13 @@ namespace GpsFolders
             }
 
             string gpsStr = String.Join("\n", gpses.OrderBy(gps => gps.Name).Select(gps => $"{gps.ToString()}{folderId}:"));
+            MyVRage.Platform.System.Clipboard = gpsStr.ToString();
+        }
+
+        public static void CopyUnsortedGpsesToClipboard()
+        {
+            var gpses = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => !i.Value.TryGetFolderId(out _)).Select(i => i.Value);
+            string gpsStr = String.Join("\n", gpses.OrderBy(gps => gps.Name).Select(gps => gps.ToString()));
             MyVRage.Platform.System.Clipboard = gpsStr.ToString();
         }
     }
