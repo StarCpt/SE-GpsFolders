@@ -282,7 +282,7 @@ namespace GpsFolders
                 if (MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
                 {
                     gpsListView = GpsFolderListView.Create(MySession.Static.Gpss[MySession.Static.LocalPlayerId].Select(i => i.Value));
-                    ___m_tableIns.Rows.AddRange(gpsListView.GetView(ref currentFolderName, searchString, expandFoldersChecked));
+                    gpsListView.GetView(ref currentFolderName, searchString, expandFoldersChecked).ForEach(row => ___m_tableIns.Add(row));
                 }
 
                 if (selectedRow != null)
@@ -498,7 +498,7 @@ namespace GpsFolders
                         }
 
                         ___m_tableIns.Clear();
-                        ___m_tableIns.Rows.AddRange(gpsListView.GetView(ref currentFolderName, gpsListView.LastSearchText, expandFoldersChecked));
+                        gpsListView.GetView(ref currentFolderName, gpsListView.LastSearchText, expandFoldersChecked).ForEach(row => ___m_tableIns.Add(row));
 
                         ___m_tableIns.SelectedRow = ___m_tableIns.Rows.FirstOrDefault(i => i is GpsFolderRow row && row.Name == newFolderName);
                         ___m_tableIns.ScrollToSelection();
