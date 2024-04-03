@@ -113,6 +113,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions.cs" />
+    <Compile Include="GpsFolderListView.cs" />
+    <Compile Include="Helpers.cs" />
     <Compile Include="Patches_GpsFolders.cs" />
     <Compile Include="Patches_Misc.cs" />
     <Compile Include="Program.cs" />

@@ -18,8 +18,8 @@ namespace GpsFolders
 {
     static class MiscellaneousPatches
     {
-        static MyGuiControlCheckbox m_showDistanceColumnCheckbox;
-        static bool showDistanceColumn = false;
+        public static MyGuiControlCheckbox m_showDistanceColumnCheckbox;
+        public static bool showDistanceColumn = false;
 
         [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Init", MethodType.Normal)]
         [HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]
@@ -124,12 +124,12 @@ namespace GpsFolders
                     
                     foreach (MyGps item in MySession.Static.Gpss[MySession.Static.LocalPlayerId].Values)
                     {
-                        string tag = item.GetFolderTag() ?? string.Empty;
-                        if (!gpsDict.ContainsKey(tag))
+                        string tag = item.GetFolderId() ?? string.Empty;
+                        if (!gpsDict.TryGetValue(tag, out List<MyGps> gpses))
                         {
-                            gpsDict.Add(tag, new List<MyGps>());
+                            gpsDict.Add(tag, gpses = new List<MyGps>());
                         }
-                        gpsDict[tag].Add(item);
+                        gpses.Add(item);
                     }
 
                     foreach (var item in gpsDict)
@@ -150,40 +150,6 @@ namespace GpsFolders
                     }
                 }
             }
-        }
-    }
-
-    public static class Helpers
-    {
-        public static string GetDistanceString(double meters)
-        {
-            if (meters >= 1000000)
-                return $"{meters / 1000:0.#} km";
-            else if (meters >= 1000)
-                return $"{meters / 1000:0.##} km";
-            else
-                return $"{meters:0.#} m";
-        }
-
-        public static string GetDistanceStringShort(double meters)
-        {
-            if (meters >= 1000000)
-                return $"{meters / 1000000:0.#}kkm";
-            else if (meters >= 1000)
-                return $"{meters / 1000:0}km";
-            else
-                return $"{meters:0}m";
-        }
-
-        public static void ShowConfirmationDialog(string caption, string text, Action<MyGuiScreenMessageBox.ResultEnum> callback)
-        {
-            var confirmationDialog = MyGuiSandbox.CreateMessageBox(
-                MyMessageBoxStyleEnum.Info,
-                MyMessageBoxButtonsType.YES_NO,
-                new StringBuilder(text),
-                new StringBuilder(caption),
-                callback: callback);
-            MyGuiSandbox.AddScreen(confirmationDialog);
         }
     }
 }
