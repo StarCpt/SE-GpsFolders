@@ -22,18 +22,22 @@ namespace GpsFolders
             return texture;
         }
 
-        public static bool TryGetFolderTag(this MyGuiControlTable.Row row, out string tag)
+        public static bool TryGetFolderId(this MyGuiControlTable.Row row, out string tag)
         {
             if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {
-                tag = GetFolderTag(gps);
-                return tag != null;
+                return gps.TryGetFolderId(out tag);
             }
             tag = null;
             return false;
         }
 
-        public static string GetFolderTag(this MyGps gps)
+        public static bool TryGetFolderId(this MyGps gps, out string folder)
+        {
+            return (folder = gps.GetFolderId()) != null;
+        }
+
+        public static string GetFolderId(this MyGps gps)
         {
             const string startTag = @"<Folder>";
             const string endTag = @"</Folder>";
@@ -46,7 +50,7 @@ namespace GpsFolders
                     (endIndex = gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1), compareType)) > startIndex)
             {
                 string tag = gps.Description.Substring(startIndex, endIndex - startIndex);
-                if (IsFolderNameValid(tag))
+                if (IsFolderIdValid(tag))
                 {
                     return tag;
                 }
@@ -54,9 +58,17 @@ namespace GpsFolders
             return null;
         }
 
-        public static void SetFolderTag(this MyGuiControlTable.Row row, string tag)
+        public static void SetFolderId(this MyGuiControlTable.Row row, string id)
         {
-            if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps && tag != null && (IsFolderNameValid(tag) || string.IsNullOrWhiteSpace(tag)))
+            if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
+            {
+                gps.SetFolderId(id);
+            }
+        }
+
+        public static void SetFolderId(this MyGps gps, string id)
+        {
+            if (id != null && (IsFolderIdValid(id) || string.IsNullOrWhiteSpace(id)))
             {
                 const string startTag = @"<Folder>";
                 const string endTag = @"</Folder>";
@@ -71,16 +83,16 @@ namespace GpsFolders
                     gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
                 }
 
-                if (IsFolderNameValid(tag))
+                if (IsFolderIdValid(id))
                 {
-                    gps.Description = startTag + tag + endTag + (!gps.Description.StartsWith("\n") ? "\n" : "") + gps.Description;
+                    gps.Description = startTag + id + endTag + (!gps.Description.StartsWith("\n") ? "\n" : "") + gps.Description;
                 }
 
                 MySession.Static.Gpss.SendModifyGpsRequest(MySession.Static.LocalPlayerId, gps);
             }
         }
 
-        public static bool IsFolderNameValid(string folderName)
+        public static bool IsFolderIdValid(string folderName)
         {
             return !string.IsNullOrWhiteSpace(folderName) &&
                 folderName.Length >= minTagLength &&
@@ -94,6 +106,24 @@ namespace GpsFolders
             if (control != null)
             {
                 control.Enabled = enabled;
+            }
+        }
+
+        public static void OrderedInsert<T>(this List<T> list, T value, Comparison<T> comparer)
+        {
+            int i = 0;
+            for (; i < list.Count; i++)
+            {
+                if (comparer(value, list[i]) < 0)
+                {
+                    list.Insert(i, value);
+                    return;
+                }
+            }
+            
+            if (i >= list.Count)
+            {
+                list.Add(value);
             }
         }
     }
