@@ -93,26 +93,28 @@ namespace GpsFolders
         {
             if (id != null && (IsFolderIdValid(id) || string.IsNullOrWhiteSpace(id)))
             {
-                if (gps.Description != null)
+                if (gps.Description == null)
                 {
-                    if (gps.Description.StartsWith(startTag))
+                    gps.Description = "";
+                }
+
+                if (gps.Description.StartsWith(startTag))
+                {
+                    int endIndex =
+                        gps.Description.Contains(endTag) ?
+                        gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
+                        gps.Description.Length;
+                    if (endIndex > startIndex)
                     {
-                        int endIndex =
-                            gps.Description.Contains(endTag) ?
-                            gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
-                            gps.Description.Length;
-                        if (endIndex > startIndex)
-                        {
-                            gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
-                        }
+                        gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
                     }
-                    else if (gps.Description.StartsWith(startTagOld))
+                }
+                else if (gps.Description.StartsWith(startTagOld))
+                {
+                    int endIndex = gps.Description.IndexOf(endTagOld, startIndexOld, Math.Min(gps.Description.Length - startIndexOld, startIndexOld + maxTagLength + 1));
+                    if (endIndex > startIndexOld)
                     {
-                        int endIndex  = gps.Description.IndexOf(endTagOld, startIndexOld, Math.Min(gps.Description.Length - startIndexOld, startIndexOld + maxTagLength + 1));
-                        if (endIndex > startIndexOld)
-                        {
-                            gps.Description = gps.Description.Remove(0, endIndex + endTagOld.Length);
-                        }
+                        gps.Description = gps.Description.Remove(0, endIndex + endTagOld.Length);
                     }
                 }
 
