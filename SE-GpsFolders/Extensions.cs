@@ -30,7 +30,7 @@ namespace GpsFolders
             return texture;
         }
 
-        public static bool TryGetFolderId(this MyGuiControlTable.Row row, out string tag)
+        public static bool TryGetFolderId(this MyGuiControlListbox.Item row, out string tag)
         {
             if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {
@@ -81,7 +81,7 @@ namespace GpsFolders
             return null;
         }
 
-        public static void SetFolderId(this MyGuiControlTable.Row row, string id)
+        public static void SetFolderId(this MyGuiControlListbox.Item row, string id)
         {
             if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
             {

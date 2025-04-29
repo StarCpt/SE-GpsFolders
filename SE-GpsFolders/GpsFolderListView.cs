@@ -64,7 +64,7 @@ namespace GpsFolders
             return view;
         }
 
-        public ListReader<MyGuiControlTable.Row> GetView(ref string currentFolderView, string searchText, bool expandAllFolders)
+        public ListReader<MyGuiControlListbox.Item> GetView(ref string currentFolderView, string searchText, bool expandAllFolders)
         {
             LastSearchText = searchText;
 
@@ -88,12 +88,12 @@ namespace GpsFolders
             return GetRootView(searchText, expandAllFolders);
         }
 
-        private ListReader<MyGuiControlTable.Row> GetFolderView(FolderEntry folder, string searchText)
+        private ListReader<MyGuiControlListbox.Item> GetFolderView(FolderEntry folder, string searchText)
         {
             bool searchEmpty = String.IsNullOrWhiteSpace(searchText);
             string[] search = !searchEmpty ? searchText.Split(' ') : Array.Empty<string>();
 
-            List<MyGuiControlTable.Row> items = new List<MyGuiControlTable.Row>
+            List<MyGuiControlListbox.Item> items = new List<MyGuiControlListbox.Item>
             {
                 new GpsFolderRow(folder.FolderId, '…' + folder.DisplayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL)
             };
@@ -102,15 +102,11 @@ namespace GpsFolders
             {
                 if (searchEmpty ^ !Match(item))
                 {
-                    var row = new MyGuiControlTable.Row(item);
-                    StringBuilder strb = new StringBuilder(item.Name);
-                    Color color = item.DiscardAt.HasValue ? Color.Gray : (item.ShowOnHud ? item.GPSColor : Color.White);
-                    row.AddCell(new MyGuiControlTable.Cell(strb, item, strb.ToString(), color));
-                    items.Add(row);
+                    items.Add(CreateGpsItem(item));
                 }
             }
 
-            return new ListReader<MyGuiControlTable.Row>(items);
+            return new ListReader<MyGuiControlListbox.Item>(items);
 
             bool Match(MyGps entry)
             {
@@ -126,9 +122,19 @@ namespace GpsFolders
             }
         }
 
-        private ListReader<MyGuiControlTable.Row> GetRootView(string searchText, bool expandAllFolders)
+        private static MyGuiControlListbox.Item CreateGpsItem(MyGps gps)
         {
-            List<MyGuiControlTable.Row> items = new List<MyGuiControlTable.Row>();
+            StringBuilder strb = new StringBuilder(gps.Name);
+            Color color = gps.DiscardAt.HasValue ? Color.Gray : (gps.ShowOnHud ? gps.GPSColor : Color.White);
+            return new MyGuiControlListbox.Item(ref strb, strb.ToString(), userData: gps)
+            {
+                ColorMask = color,
+            };
+        }
+
+        private ListReader<MyGuiControlListbox.Item> GetRootView(string searchText, bool expandAllFolders)
+        {
+            List<MyGuiControlListbox.Item> items = new List<MyGuiControlListbox.Item>();
 
             bool searchEmpty = String.IsNullOrWhiteSpace(searchText);
             string[] search = !searchEmpty ? searchText.Split(' ') : Array.Empty<string>();
@@ -173,7 +179,7 @@ namespace GpsFolders
                 }
             }
 
-            return new ListReader<MyGuiControlTable.Row>(items);
+            return new ListReader<MyGuiControlListbox.Item>(items);
 
             void AddFolderRow(FolderEntry folder, int index)
             {
@@ -183,11 +189,7 @@ namespace GpsFolders
 
             void AddGpsRow(MyGps gps)
             {
-                var row = new MyGuiControlTable.Row(gps);
-                StringBuilder strb = new StringBuilder(gps.Name);
-                Color color = gps.DiscardAt.HasValue ? Color.Gray : (gps.ShowOnHud ? gps.GPSColor : Color.White);
-                row.AddCell(new MyGuiControlTable.Cell(strb, gps, strb.ToString(), color));
-                items.Add(row);
+                items.Add(CreateGpsItem(gps));
             }
 
             bool Match(string folderId, string gpsName)

@@ -19,47 +19,47 @@ namespace GpsFolders
 {
     static class MiscellaneousPatches
     {
-        public static MyGuiControlCheckbox m_showDistanceColumnCheckbox;
-        public static bool showDistanceColumn = false;
+        //public static MyGuiControlCheckbox m_showDistanceColumnCheckbox;
+        //public static bool showDistanceColumn = false;
 
-        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "Init", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]
-        static class MyTerminalGpsController_Init
-        {
-            static void Postfix(object __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlTable ___m_tableIns)
-            {
-                (m_showDistanceColumnCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ShowDistanceCheckbox")).IsCheckedChanged += delegate
-                {
-                    showDistanceColumn = !showDistanceColumn;
-                    ___m_tableIns.SetColumnVisibility(1, showDistanceColumn);
-                    ___m_tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
-                    ___m_tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
-                };
-            }
-        }
-
-        [HarmonyPatch("Sandbox.Game.Gui.MyTerminalGpsController", "PopulateList", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(string) })]
-        static class MyTerminalGpsController_PopulateList
-        {
-            static void Postfix(MyGuiControlTable ___m_tableIns)
-            {
-                if (MySession.Static?.LocalCharacter?.PositionComp == null)
-                    return;
-
-                Vector3D myPos = MySession.Static.LocalCharacter.PositionComp.GetPosition();
-
-                foreach (var row in ___m_tableIns.Rows)
-                {
-                    if (!(row is NonGpsRow) && row.UserData is MyGps gps)
-                    {
-                        double dist = Vector3D.Distance(myPos, gps.Coords);
-                        row.GetCell(0).ToolTip.AddToolTip($"Distance: {Helpers.GetDistanceString(dist)}");
-                        row.AddCell(new MyGuiControlTable.Cell(Helpers.GetDistanceStringShort(dist), null, $"Distance: {Helpers.GetDistanceString(dist)}"));
-                    }
-                }
-            }
-        }
+        //[HarmonyPatch("Sandbox.Game.Screens.Terminal.MyTerminalGpsController", "Init", MethodType.Normal)]
+        //[HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]
+        //static class MyTerminalGpsController_Init
+        //{
+        //    static void Postfix(object __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlListbox ___m_listboxGps)
+        //    {
+        //        (m_showDistanceColumnCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ShowDistanceCheckbox")).IsCheckedChanged += delegate
+        //        {
+        //            showDistanceColumn = !showDistanceColumn;
+        //            ___m_tableIns.SetColumnVisibility(1, showDistanceColumn);
+        //            ___m_tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
+        //            ___m_tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
+        //        };
+        //    }
+        //}
+        //
+        //[HarmonyPatch("Sandbox.Game.Screens.Terminal.MyTerminalGpsController", "PopulateList", MethodType.Normal)]
+        //[HarmonyPatch(new Type[] { typeof(string) })]
+        //static class MyTerminalGpsController_PopulateList
+        //{
+        //    static void Postfix(MyGuiControlListbox ___m_listboxGps)
+        //    {
+        //        if (MySession.Static?.LocalCharacter?.PositionComp == null)
+        //            return;
+        //
+        //        Vector3D myPos = MySession.Static.LocalCharacter.PositionComp.GetPosition();
+        //
+        //        foreach (var row in ___m_tableIns.Rows)
+        //        {
+        //            if (!(row is NonGpsRow) && row.UserData is MyGps gps)
+        //            {
+        //                double dist = Vector3D.Distance(myPos, gps.Coords);
+        //                row.GetCell(0).ToolTip.AddToolTip($"Distance: {Helpers.GetDistanceString(dist)}");
+        //                row.AddCell(new MyGuiControlTable.Cell(Helpers.GetDistanceStringShort(dist), null, $"Distance: {Helpers.GetDistanceString(dist)}"));
+        //            }
+        //        }
+        //    }
+        //}
 
         [HarmonyPatch(typeof(MyGuiScreenTerminal), "CreateGpsPageControls", MethodType.Normal)]
         [HarmonyPatch(new Type[] { typeof(MyGuiControlTabPage) })]
@@ -67,10 +67,10 @@ namespace GpsFolders
         {
             static void Postfix(MyGuiControlTabPage gpsPage)
             {
-                MyGuiControlBase textInsY = gpsPage.GetControlByName("textInsY");
+                MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
                 MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
                 MyGuiControlBase buttonToClipboard = gpsPage.GetControlByName("buttonToClipboard");
-
+                
                 MyGuiControlButton copyAllGpsesButton = new MyGuiControlButton
                 {
                     Text = "Copy ALL gpses to clipboard",
@@ -87,33 +87,33 @@ namespace GpsFolders
                 copyAllGpsesButton.ButtonClicked += (source) => Helpers.ShowConfirmationDialog("Copy all gpses!", "Are you sure you want to copy ALL of your gpses to clipboard?", CopyAllGpsesToClipboardDialogCallback);
                 gpsPage.Controls.Add(copyAllGpsesButton);
 
-                MyGuiControlTable tableIns = (MyGuiControlTable)gpsPage.Controls.GetControlByName("TableINS");
-                tableIns.ColumnsCount = 2;
-                tableIns.SetCustomColumnWidths(new float[2] { 0.75f, 0.25f });
-                tableIns.SetColumnAlign(1, MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER);
-                tableIns.SetColumnVisibility(1, showDistanceColumn);
-                tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
-                tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
-
-                MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel
-                {
-                    Position = new Vector2(-0.321f, -0.267f + 0.011f),
-                    Name = "ShowDistanceLabel",
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
-                    Text = MyTexts.GetString("Dist"),
-                    TextScale = 0.7f,
-                };
-                gpsPage.Controls.Add(expandFoldersLabel);
-
-                MyGuiControlCheckbox expandFoldersCheckbox = new MyGuiControlCheckbox
-                {
-                    Position = new Vector2(-0.316f, -0.277f),
-                    Name = "ShowDistanceCheckbox",
-                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-                    IsChecked = showDistanceColumn,
-                };
-                expandFoldersCheckbox.SetToolTip(new MyToolTips("Show Distance Column"));
-                gpsPage.Controls.Add(expandFoldersCheckbox);
+                //MyGuiControlTable tableIns = (MyGuiControlTable)gpsPage.Controls.GetControlByName("TableINS");
+                //tableIns.ColumnsCount = 2;
+                //tableIns.SetCustomColumnWidths(new float[2] { 0.75f, 0.25f });
+                //tableIns.SetColumnAlign(1, MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER);
+                //tableIns.SetColumnVisibility(1, showDistanceColumn);
+                //tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
+                //tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
+                //
+                //MyGuiControlLabel showDistanceLabel = new MyGuiControlLabel
+                //{
+                //    Position = new Vector2(-0.321f, -0.267f + 0.011f),
+                //    Name = "ShowDistanceLabel",
+                //    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
+                //    Text = MyTexts.GetString("Dist"),
+                //    TextScale = 0.7f,
+                //};
+                //gpsPage.Controls.Add(showDistanceLabel);
+                
+                //MyGuiControlCheckbox showDistanceCheckbox = new MyGuiControlCheckbox
+                //{
+                //    Position = new Vector2(-0.316f, -0.277f),
+                //    Name = "ShowDistanceCheckbox",
+                //    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+                //    IsChecked = showDistanceColumn,
+                //};
+                //showDistanceCheckbox.SetToolTip(new MyToolTips("Show Distance Column"));
+                //gpsPage.Controls.Add(showDistanceCheckbox);
             }
 
             private static void CopyAllGpsesToClipboardDialogCallback(MyGuiScreenMessageBox.ResultEnum result)

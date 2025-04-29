@@ -10,33 +10,17 @@ using VRageMath;
 
 namespace GpsFolders.Rows
 {
-    abstract class NonGpsRow : MyGuiControlTable.Row
+    abstract class NonGpsRow : MyGuiControlListbox.Item
     {
-        public string Name { get; protected set; }
-        public string DisplayName
-        {
-            get => _displayName;
-            set
-            {
-                if (_displayName != value)
-                {
-                    _displayName = value;
-                    _cell.Text.Clear().Append(value);
-                    _dummyGps.DisplayName = value;
-                }
-            }
-        }
-        public MyGuiHighlightTexture? Icon
-        {
-            get => _cell.Icon;
-            set => _cell.Icon = value;
-        }
+        public string Name { get; }
+        public string DisplayName { get; }
 
-        private string _displayName;
         protected MyGps _dummyGps;
-        protected MyGuiControlTable.Cell _cell;
 
         protected NonGpsRow(string name, string displayName, Color color, MyGuiHighlightTexture? icon, string toolTip = null) : base(
+            new StringBuilder(displayName),
+            toolTip,
+            icon?.Normal,
             new MyGps
             {
                 Name = name,
@@ -48,19 +32,13 @@ namespace GpsFolders.Rows
                 Coords = Vector3D.Zero,
                 DiscardAt = null,
                 GPSColor = color,
-            }, toolTip)
+            }, 
+            null)
         {
-            this.Name = name;
-            this._displayName = displayName;
-            this._dummyGps = (MyGps)this.UserData;
-            this._cell = new MyGuiControlTable.Cell(
-                this.DisplayName,
-                this.UserData,
-                toolTip,
-                color,
-                icon,
-                MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_CENTER);
-            this.AddCell(_cell);
+            Name = name;
+            DisplayName = displayName;
+            this.ColorMask = color;
+            _dummyGps = (MyGps)UserData;
         }
     }
 }
