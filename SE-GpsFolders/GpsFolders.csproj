@@ -12,7 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\Plugins\Libraries\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="netstandard" />
     <Reference Include="ProtoBuf.Net">
