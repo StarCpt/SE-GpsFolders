@@ -22,6 +22,7 @@ using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 
+#pragma warning disable IDE0051
 namespace GpsFolders
 {
     static class MyGuiScreenTerminalPatches
@@ -158,33 +159,34 @@ namespace GpsFolders
 
                 (m_showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton")).ButtonClicked += delegate
                 {
-                    if (___m_listboxGps.GetLastSelected() is GpsFolderRow folder)
-                    {
-                        Helpers.SetFolderShowOnHud(folder.Name, true);
-                    }
-                    else if (___m_listboxGps.GetLastSelected() is UnsortedGpsFolderRow separator)
-                    {
-                        Helpers.SetUnsortedFolderShowOnHud(true);
-                    }
+                    SetSelectedFoldersShowOnHud(true);
                 };
 
                 (m_hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton")).ButtonClicked += delegate
                 {
-                    if (___m_listboxGps.GetLastSelected() is GpsFolderRow folder)
-                    {
-                        Helpers.SetFolderShowOnHud(folder.Name, false);
-                    }
-                    else if (___m_listboxGps.GetLastSelected() is UnsortedGpsFolderRow separator)
-                    {
-                        Helpers.SetUnsortedFolderShowOnHud(false);
-                    }
+                    SetSelectedFoldersShowOnHud(false);
                 };
 
                 (m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox")).TextChanged += textbox =>
                 {
-                    ___m_listboxGps.GetLastSelected()?.SetFolderId(textbox.Text);
+                    ___m_listboxGps.SelectedItems.ForEach(i => i?.SetFolderId(textbox.Text));
                 };
                 m_gpsFolderNameTextBox.Enabled = false;
+
+                void SetSelectedFoldersShowOnHud(bool showOnHud)
+                {
+                    foreach (MyGuiControlListbox.Item item in ___m_listboxGps.SelectedItems)
+                    {
+                        if (item is GpsFolderRow folder)
+                        {
+                            Helpers.SetFolderShowOnHud(folder.Name, showOnHud);
+                        }
+                        else if (item is UnsortedGpsFolderRow separator)
+                        {
+                            Helpers.SetUnsortedFolderShowOnHud(showOnHud);
+                        }
+                    }
+                }
             }
         }
 
