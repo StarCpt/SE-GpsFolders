@@ -67,59 +67,96 @@ namespace GpsFolders
         public ListReader<MyGuiControlListbox.Item> GetView(ref string currentFolderView, string searchText, bool expandAllFolders)
         {
             LastSearchText = searchText;
+            
+            bool isSearch = !string.IsNullOrWhiteSpace(searchText);
 
-            if (currentFolderView != null)
+            if (isSearch || (currentFolderView == null && expandAllFolders))
             {
-                if (currentFolderView == "")
+                if (isSearch) currentFolderView = null; // Reset view hierarchy when searching
+                return GetFlatView(searchText);
+            }
+
+            return GetHierarchicalView(currentFolderView, searchText);
+        }
+
+        private ListReader<MyGuiControlListbox.Item> GetHierarchicalView(string currentPath, string searchText)
+        {
+            List<MyGuiControlListbox.Item> items = new List<MyGuiControlListbox.Item>();
+
+            // 1. Add ".." Back Button
+            if (currentPath != null)
+            {
+                string parentPath = GetParentPath(currentPath);
+                items.Add(new GpsFolderRow(parentPath ?? string.Empty, "[ .. ]", Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, "Go Up"));
+            }
+
+            // 2. Identify and Add Sub-folders
+            HashSet<string> subFolders = new HashSet<string>();
+            List<MyGps> directItems = new List<MyGps>();
+
+            // Direct items in current folder
+            if (currentPath != null && _folders.TryGetValue(currentPath, out FolderEntry currentFolder))
+            {
+                directItems.AddRange(currentFolder.Entries);
+            }
+            
+            // Scan for subfolders
+            foreach (var kvp in _folders)
+            {
+                string folderPath = kvp.Key;
+                if (currentPath == null)
                 {
-                    return GetFolderView(_unsortedFolder, searchText);
+                    // Root
+                    string segment = folderPath.Split('/')[0];
+                    if (!string.IsNullOrEmpty(segment)) subFolders.Add(segment);
                 }
-                else if (_folders.TryGetValue(currentFolderView, out FolderEntry folder))
+                else if (folderPath.StartsWith(currentPath + "/"))
                 {
-                    return GetFolderView(folder, searchText);
-                }
-                else
-                {
-                    currentFolderView = null;
-                    return GetRootView(searchText, expandAllFolders);
+                    string remainder = folderPath.Substring(currentPath.Length + 1);
+                    string segment = remainder.Split('/')[0];
+                    subFolders.Add(currentPath + "/" + segment); 
                 }
             }
 
-            return GetRootView(searchText, expandAllFolders);
-        }
-
-        private ListReader<MyGuiControlListbox.Item> GetFolderView(FolderEntry folder, string searchText)
-        {
-            bool searchEmpty = String.IsNullOrWhiteSpace(searchText);
-            string[] search = !searchEmpty ? searchText.Split(' ') : Array.Empty<string>();
-
-            List<MyGuiControlListbox.Item> items = new List<MyGuiControlListbox.Item>
+            foreach (var subFolderId in subFolders)
             {
-                new GpsFolderRow(folder.FolderId, '…' + folder.DisplayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_BLUEPRINTS_LOCAL)
-            };
-
-            foreach (var item in folder.Entries)
-            {
-                if (searchEmpty ^ !Match(item))
+                string displayName = subFolderId.Split('/').Last();
+                int count = 0;
+                foreach(var kv in _folders)
                 {
-                    items.Add(CreateGpsItem(item));
+                    if (kv.Key == subFolderId || kv.Key.StartsWith(subFolderId + "/"))
+                        count += kv.Value.Entries.Count;
                 }
+                string toolTip = $"{count} Item{(count != 1 ? "s" : "")}";
+                items.Add(new GpsFolderRow(subFolderId, displayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, toolTip));
+            }
+
+            // 3. Add Direct Items
+            foreach (var gps in directItems)
+            {
+                items.Add(CreateGpsItem(gps));
+            }
+
+            // 4. Unsorted Items (Root only)
+            if (currentPath == null && _unsortedFolder.Entries.Count > 0)
+            {
+                 string toolTip = $"Unsorted Items\n{_unsortedFolder.Entries.Count} Item{(_unsortedFolder.Entries.Count != 1 ? "s" : "")}";
+                 items.Add(new UnsortedGpsFolderRow("", MISC_GPS_SEPARATOR_NAME, Color.Yellow, toolTip));
+                 foreach(var gps in _unsortedFolder.Entries)
+                 {
+                     items.Add(CreateGpsItem(gps));
+                 }
             }
 
             return new ListReader<MyGuiControlListbox.Item>(items);
+        }
 
-            bool Match(MyGps entry)
-            {
-                for (int i = 0; i < search.Length; i++)
-                {
-                    if (entry.Name.Contains(search[i], StringComparison.OrdinalIgnoreCase))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
+        private string GetParentPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            int lastSlash = path.LastIndexOf('/');
+            if (lastSlash == -1) return null; 
+            return path.Substring(0, lastSlash);
         }
 
         private static MyGuiControlListbox.Item CreateGpsItem(MyGps gps)
@@ -132,7 +169,7 @@ namespace GpsFolders
             };
         }
 
-        private ListReader<MyGuiControlListbox.Item> GetRootView(string searchText, bool expandAllFolders)
+        private ListReader<MyGuiControlListbox.Item> GetFlatView(string searchText)
         {
             List<MyGuiControlListbox.Item> items = new List<MyGuiControlListbox.Item>();
 
@@ -145,7 +182,7 @@ namespace GpsFolders
                 int folderIndex = items.Count;
                 foreach (var entry in folder.Value.Entries)
                 {
-                    if ((searchEmpty && expandAllFolders) || (!searchEmpty && Match(folder.Value.FolderId, entry.Name)))
+                    if (searchEmpty || Match(folder.Value.FolderId, entry.Name))
                     {
                         matchAny = true;
                         AddGpsRow(entry);
@@ -164,7 +201,7 @@ namespace GpsFolders
                 int folderIndex = items.Count;
                 foreach (var entry in _unsortedFolder.Entries)
                 {
-                    if ((searchEmpty/* && expandAllFolders*/) || (!searchEmpty && Match(_unsortedFolder.DisplayName, entry.Name)))
+                    if (searchEmpty || Match(_unsortedFolder.DisplayName, entry.Name))
                     {
                         matchAny = true;
                         AddGpsRow(entry);
@@ -173,7 +210,6 @@ namespace GpsFolders
 
                 if ((matchAny || searchEmpty) && folderIndex > 0)
                 {
-                    //AddFolderRow(_unsortedFolder, folderIndex);
                     string toolTip = $"Unsorted Items\n{_unsortedFolder.Entries.Count} Item{(_unsortedFolder.Entries.Count != 1 ? "s" : "")}";
                     items.Insert(folderIndex, new UnsortedGpsFolderRow("", MISC_GPS_SEPARATOR_NAME, Color.Yellow, toolTip));
                 }

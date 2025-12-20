@@ -412,10 +412,10 @@ namespace GpsFolders
                 bool runOriginal = !(senderListbox.SelectedItems.FirstOrDefault() is NonGpsRow);
                 if (senderListbox.SelectedItems.FirstOrDefault() is GpsFolderRow folder)
                 {
-                    if (currentFolderName == null)
-                        currentFolderName = folder.Name;
-                    else
+                    if (string.IsNullOrEmpty(folder.Name))
                         currentFolderName = null;
+                    else
+                        currentFolderName = folder.Name;
 
                     Instance.PopulateList();
                     return false;
