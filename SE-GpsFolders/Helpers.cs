@@ -43,7 +43,7 @@ namespace GpsFolders
             MyGuiSandbox.AddScreen(confirmationDialog);
         }
 
-        public static bool TryGetFolderGpses(string folderId, out IEnumerable<MyGps> result)
+        public static bool TryGetFolderGpses(string folderId, out IEnumerable<MyGps> result, bool recursive = false)
         {
             if (!Extensions.IsFolderIdValid(folderId))
             {
@@ -57,24 +57,27 @@ namespace GpsFolders
                 return false;
             }
 
-            result = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => i.Value.GetFolderId() == folderId).Select(i => i.Value).ToArray();
+            result = MySession.Static.Gpss[MySession.Static.LocalPlayerId]
+                .Where(i => 
+                {
+                    string id = i.Value.GetFolderId();
+                    return id == folderId || (recursive && id != null && id.StartsWith(folderId + "/"));
+                })
+                .Select(i => i.Value).ToArray();
             return result.Count() > 0;
         }
 
-        public static void SetFolderShowOnHud(string folderId, bool showOnHud)
+        public static void SetFolderShowOnHud(string folderId, bool showOnHud, bool recursive = false)
         {
-            if (!TryGetFolderGpses(folderId, out IEnumerable<MyGps> gpses))
+            if (!TryGetFolderGpses(folderId, out IEnumerable<MyGps> gpses, recursive))
             {
                 return;
             }
 
             foreach (MyGps gps in gpses)
             {
-                if (gps.GetFolderId() == folderId)
-                {
-                    gps.ShowOnHud = showOnHud;
-                    MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
-                }
+                gps.ShowOnHud = showOnHud;
+                MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
             }
         }
 

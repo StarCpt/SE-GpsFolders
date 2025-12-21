@@ -33,7 +33,37 @@ namespace GpsFolders
         {
             static void Postfix(MyGuiControlTabPage gpsPage)
             {
+                MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
+                MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
+
                 MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel()
+                {
+                    Position = new Vector2(-0.196f, -0.267f + 0.011f), // Moved slightly up or adjusting layout?
+                };
+
+                MyGuiControlCheckbox includeSubFoldersCheckbox = new MyGuiControlCheckbox
+                {
+                    Position = new Vector2(buttonFromCurrent.Position.X + 0.43f + 0.001f, buttonFromCurrent.Position.Y + 0.049f), // Below "Show All", aligned to the right of the vanilla button.
+                    Name = "IncludeSubFoldersCheckbox",
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+                    IsChecked = MyTerminalGpsControllerPatches.includeSubFoldersChecked,
+                };
+                includeSubFoldersCheckbox.SetToolTip(new MyToolTips("Include Sub-Folders in Hide/Show operations"));
+                gpsPage.Controls.Add(includeSubFoldersCheckbox);
+
+                MyGuiControlLabel includeSubFoldersLabel = new MyGuiControlLabel
+                {
+                    Position = new Vector2(includeSubFoldersCheckbox.Position.X + includeSubFoldersCheckbox.Size.X + 0.005f, includeSubFoldersCheckbox.Position.Y + includeSubFoldersCheckbox.Size.Y / 2.0f),
+                    Name = "IncludeSubFoldersLabel",
+                    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_CENTER,
+                    Text = "Include Sub-Folders", 
+                    TextScale = 0.7f,
+                };
+                gpsPage.Controls.Add(includeSubFoldersLabel);
+
+
+                // Existing Expand Folders controls
+                MyGuiControlLabel expandFoldersLabel2 = new MyGuiControlLabel()
                 {
                     Position = new Vector2(-0.196f, -0.267f + 0.011f),
                     Name = "ExpandFoldersLabel",
@@ -41,7 +71,7 @@ namespace GpsFolders
                     Text = MyTexts.GetString("Expand Folders"),
                     TextScale = 0.7f,
                 };
-                gpsPage.Controls.Add(expandFoldersLabel);
+                gpsPage.Controls.Add(expandFoldersLabel2);
 
                 MyGuiControlCheckbox expandFoldersCheckbox = new MyGuiControlCheckbox
                 {
@@ -53,9 +83,9 @@ namespace GpsFolders
                 expandFoldersCheckbox.SetToolTip(new MyToolTips("Expand Folders"));
                 gpsPage.Controls.Add(expandFoldersCheckbox);
 
-                MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
-                MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
-
+                //MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY"); // Moved up
+                //MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent"); // Moved up
+ 
                 MyGuiControlButton showFolderOnHudButton = new MyGuiControlButton
                 {
                     Text = "Show All",
@@ -130,8 +160,10 @@ namespace GpsFolders
 
         public static string currentFolderName = null;
         public static bool expandFoldersChecked = false;
+        public static bool includeSubFoldersChecked = false;
 
         static MyGuiControlCheckbox m_expandFoldersCheckbox;
+        static MyGuiControlCheckbox m_includeSubFoldersCheckbox;
         static MyGuiControlButton m_showFolderOnHudButton;
         static MyGuiControlButton m_hideFolderOnHudButton;
         static MyGuiControlTextbox m_gpsFolderNameTextBox;
@@ -157,14 +189,19 @@ namespace GpsFolders
                     Instance.PopulateList();
                 };
 
+                (m_includeSubFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("IncludeSubFoldersCheckbox")).IsCheckedChanged += delegate
+                {
+                    includeSubFoldersChecked = !includeSubFoldersChecked;
+                };
+
                 (m_showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton")).ButtonClicked += delegate
                 {
-                    SetSelectedFoldersShowOnHud(true);
+                    SetCurrentViewShowOnHud(true);
                 };
 
                 (m_hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton")).ButtonClicked += delegate
                 {
-                    SetSelectedFoldersShowOnHud(false);
+                    SetCurrentViewShowOnHud(false);
                 };
 
                 (m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox")).TextChanged += textbox =>
@@ -173,17 +210,33 @@ namespace GpsFolders
                 };
                 m_gpsFolderNameTextBox.Enabled = false;
 
-                void SetSelectedFoldersShowOnHud(bool showOnHud)
+                void SetCurrentViewShowOnHud(bool showOnHud)
                 {
-                    foreach (MyGuiControlListbox.Item item in ___m_listboxGps.SelectedItems)
+                    if (currentFolderName != null)
                     {
-                        if (item is GpsFolderRow folder)
+                        // Inside a folder: Apply to current folder (and sub-folders if checked)
+                        Helpers.SetFolderShowOnHud(currentFolderName, showOnHud, includeSubFoldersChecked);
+                    }
+                    else
+                    {
+                        // Root View: Apply to Unsorted AND all Top-Level folders
+                        Helpers.SetUnsortedFolderShowOnHud(showOnHud);
+
+                        // Find all top-level folders
+                        if (MySession.Static != null && MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
                         {
-                            Helpers.SetFolderShowOnHud(folder.Name, showOnHud);
-                        }
-                        else if (item is UnsortedGpsFolderRow separator)
-                        {
-                            Helpers.SetUnsortedFolderShowOnHud(showOnHud);
+                            var playerGps = MySession.Static.Gpss[MySession.Static.LocalPlayerId];
+                            var topFolders = playerGps.Values
+                                .Select(g => g.GetFolderId())
+                                .Where(id => !string.IsNullOrEmpty(id))
+                                .Select(id => id.Split('/')[0])
+                                .Distinct()
+                                .ToList();
+
+                            foreach (var folder in topFolders)
+                            {
+                                Helpers.SetFolderShowOnHud(folder, showOnHud, includeSubFoldersChecked);
+                            }
                         }
                     }
                 }
@@ -379,8 +432,8 @@ namespace GpsFolders
                     ___m_checkGpsShowOnHud.Enabled = true;
                     ___m_checkGpsAlwaysVisible.Enabled = true;
 
-                    m_showFolderOnHudButton?.SetEnabled(false);
-                    m_hideFolderOnHudButton?.SetEnabled(false);
+                    m_showFolderOnHudButton?.SetEnabled(true);
+                    m_hideFolderOnHudButton?.SetEnabled(true);
                     if (m_gpsFolderNameTextBox != null)
                     {
                         if (selectedItem != null && selectedItem.TryGetFolderId(out string tag))
@@ -530,8 +583,8 @@ namespace GpsFolders
             public static void Postfix()
             {
                 Instance = null;
-
                 m_expandFoldersCheckbox = null;
+                m_includeSubFoldersCheckbox = null;
                 m_showFolderOnHudButton = null;
                 m_hideFolderOnHudButton = null;
                 m_gpsFolderNameTextBox = null;
