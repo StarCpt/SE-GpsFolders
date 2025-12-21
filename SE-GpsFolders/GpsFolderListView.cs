@@ -70,10 +70,15 @@ namespace GpsFolders
             
             bool isSearch = !string.IsNullOrWhiteSpace(searchText);
 
-            if (isSearch || (currentFolderView == null && expandAllFolders))
+            if (isSearch)
             {
-                if (isSearch) currentFolderView = null; // Reset view hierarchy when searching
-                return GetFlatView(searchText);
+                 currentFolderView = null; // Reset view hierarchy when searching
+                 return GetFlatView(null, searchText);
+            }
+
+            if (expandAllFolders)
+            {
+                return GetFlatView(currentFolderView, searchText);
             }
 
             return GetHierarchicalView(currentFolderView, searchText);
@@ -169,15 +174,28 @@ namespace GpsFolders
             };
         }
 
-        private ListReader<MyGuiControlListbox.Item> GetFlatView(string searchText)
+        private ListReader<MyGuiControlListbox.Item> GetFlatView(string scope, string searchText)
         {
             List<MyGuiControlListbox.Item> items = new List<MyGuiControlListbox.Item>();
+
+            // Add Back Button if in scoped view
+            if (scope != null)
+            {
+                string parentPath = GetParentPath(scope);
+                items.Add(new GpsFolderRow(parentPath ?? string.Empty, "[ .. ]", Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, "Go Up"));
+            }
 
             bool searchEmpty = String.IsNullOrWhiteSpace(searchText);
             string[] search = !searchEmpty ? searchText.Split(' ') : Array.Empty<string>();
 
+            // Filter folders based on scope
             foreach (var folder in _folders)
             {
+                // Include if scope is null (Root) OR folder IS scope OR folder starts with scope/
+                bool inScope = scope == null || folder.Key == scope || folder.Key.StartsWith(scope + "/");
+                
+                if (!inScope) continue;
+
                 bool matchAny = false;
                 int folderIndex = items.Count;
                 foreach (var entry in folder.Value.Entries)
@@ -195,7 +213,8 @@ namespace GpsFolders
                 }
             }
 
-            if (_unsortedFolder.Entries.Count > 0)
+            // Unsorted items only shown at Root scope
+            if (scope == null && _unsortedFolder.Entries.Count > 0)
             {
                 bool matchAny = false;
                 int folderIndex = items.Count;
@@ -220,7 +239,9 @@ namespace GpsFolders
             void AddFolderRow(FolderEntry folder, int index)
             {
                 string toolTip = $"{folder.Entries.Count} Item{(folder.Entries.Count != 1 ? "s" : "")}";
-                items.Insert(index, new GpsFolderRow(folder.FolderId, folder.DisplayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, toolTip));
+                string displayName = folder.DisplayName;
+                // If scoped, maybe show relative path? Or kept simple. Reverting to full name or keeping simple usage.
+                items.Insert(index, new GpsFolderRow(folder.FolderId, displayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, toolTip));
             }
 
             void AddGpsRow(MyGps gps)
