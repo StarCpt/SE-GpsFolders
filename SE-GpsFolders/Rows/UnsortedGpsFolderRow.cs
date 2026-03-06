@@ -1,18 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using VRageMath;
+﻿using VRageMath;
 
-namespace GpsFolders.Rows
+namespace GpsFolders.Rows;
+
+class UnsortedGpsFolderRow : NonGpsRow
 {
-    class UnsortedGpsFolderRow : NonGpsRow
+    public UnsortedGpsFolderRow(string name, string displayName, Color color, string toolTip = null)
+        : base(name, displayName, color, null, toolTip)
     {
-        public UnsortedGpsFolderRow(string name, string displayName, Color color, string toolTip = null)
-            : base(name, displayName, color, null, toolTip)
-        {
 
-        }
     }
 }
