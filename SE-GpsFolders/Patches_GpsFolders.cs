@@ -1,22 +1,15 @@
 ﻿using GpsFolders.Rows;
-using GpsFolders.Wrappers;
 using HarmonyLib;
 using Sandbox.Game;
 using Sandbox.Game.Gui;
-using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.Screens.Terminal;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
-using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net;
-using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using VRage;
 using VRage.Game;
 using VRage.Utils;
@@ -27,8 +20,7 @@ namespace GpsFolders
 {
     static class MyGuiScreenTerminalPatches
     {
-        [HarmonyPatch(typeof(MyGuiScreenTerminal), "CreateGpsPageControls", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlTabPage) })]
+        [HarmonyPatch(typeof(MyGuiScreenTerminal), nameof(MyGuiScreenTerminal.CreateGpsPageControls))]
         static class Patch_CreateGpsPageControls
         {
             static void Postfix(MyGuiControlTabPage gpsPage)
@@ -126,7 +118,6 @@ namespace GpsFolders
     static class MyTerminalGpsControllerPatches
     {
         public const string MISC_GPS_SEPARATOR_NAME = "--------------------------------------------------";
-        public const string TARGET_TYPE = "Sandbox.Game.Screens.Terminal.MyTerminalGpsController";
 
         public static string currentFolderName = null;
         public static bool expandFoldersChecked = false;
@@ -138,23 +129,15 @@ namespace GpsFolders
 
         public static GpsFolderListView gpsListView;
 
-        public static MyTerminalGpsControllerWrapper Instance { get; private set; } // assume only 1 instance is active at any time (needs testing, but probably true)
-
-        [HarmonyPatch(TARGET_TYPE, "Init", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(IMyGuiControlsParent) })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Init))]
         public static class Patch_Init
         {
-            public static void Prefix(object __instance)
-            {
-                Instance = new MyTerminalGpsControllerWrapper(__instance);
-            }
-
-            public static void Postfix(object __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlListbox ___m_listboxGps)
+            public static void Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlListbox ___m_listboxGps)
             {
                 (m_expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox")).IsCheckedChanged += delegate
                 {
                     expandFoldersChecked = !expandFoldersChecked;
-                    Instance.PopulateList();
+                    __instance.PopulateList();
                 };
 
                 (m_showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton")).ButtonClicked += delegate
@@ -190,11 +173,10 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "PopulateList", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.PopulateList))]
         public static class Patch_PopulateList
         {
-            public static bool Prefix(string ___m_searchString, object __instance, MyGuiControlListbox ___m_listboxGps, List<MyGps> ___m_gpsListCache)
+            public static bool Prefix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps, List<MyGps> ___m_gpsListCache)
             {
                 //object selectedRow = ___m_tableIns.SelectedRow?.UserData;
                 //int? selectedIndex = ___m_tableIns.SelectedRowIndex;
@@ -205,7 +187,7 @@ namespace GpsFolders
                 MyGps lastSelectedGps = selectedGpses.LastOrDefault();
                 int lastSelectedItemIndex = selectedGpses.Length > 0 ? ___m_listboxGps.Items.IndexOf(___m_listboxGps.GetLastSelected()) : -1;
 
-                Instance.ClearList();
+                __instance.ClearList();
 
                 if (MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
                 {
@@ -219,7 +201,7 @@ namespace GpsFolders
                     itemsToAdd.ForEach(i => ___m_listboxGps.Add(i));
                 }
 
-                EnableEditBoxes(enable: false);
+                __instance.EnableEditBoxes(enable: false);
                 if (selectedGpses.Length > 0)
                 {
                     foreach (MyGuiControlListbox.Item item in ___m_listboxGps.Items)
@@ -227,8 +209,8 @@ namespace GpsFolders
                         if (selectedGpses.Contains((MyGps)item.UserData))
                         {
                             ___m_listboxGps.SelectedItems.Add(item);
-                            Instance.SetEnabledStates(___m_listboxGps);
-                            SetDeleteButtonEnabled(enabled: true);
+                            __instance.SetEnabledStates(___m_listboxGps);
+                            __instance.SetDeleteButtonEnabled(enabled: true);
                         }
                     }
 
@@ -244,8 +226,8 @@ namespace GpsFolders
                             ___m_listboxGps.SelectSingleItem(___m_listboxGps.Items[lastSelectedItemIndex]);
                             if (___m_listboxGps.SelectedItems.Count != 0)
                             {
-                                SetDeleteButtonEnabled(enabled: true);
-                                Instance.FillRight((MyGps)___m_listboxGps.SelectedItems[0].UserData);
+                                __instance.SetDeleteButtonEnabled(enabled: true);
+                                __instance.FillRight((MyGps)___m_listboxGps.SelectedItems[0].UserData);
                             }
                         }
                     }
@@ -254,23 +236,13 @@ namespace GpsFolders
                 ___m_listboxGps.ScrollToFirstSelection();
                 if (selectedGpses.Length > 0)
                 {
-                    Instance.FillRight();
+                    __instance.FillRight();
                 }
 
                 return false;
-
-                void EnableEditBoxes(bool enable, bool forceEnableColorSelection = false, bool isGpsReadOnly = false)
-                {
-                    Instance.EnableEditBoxes(enable, forceEnableColorSelection, isGpsReadOnly);
-                }
-
-                void SetDeleteButtonEnabled(bool enabled)
-                {
-                    Instance.SetDeleteButtonEnabled(enabled);
-                }
             }
 
-            public static void Postfix(string ___m_searchString, object __instance, MyGuiControlListbox ___m_listboxGps)
+            public static void Postfix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps)
             {
                 m_showFolderOnHudButton.SetEnabled(string.IsNullOrWhiteSpace(___m_searchString));
                 m_hideFolderOnHudButton.SetEnabled(string.IsNullOrWhiteSpace(___m_searchString));
@@ -318,7 +290,7 @@ namespace GpsFolders
             return Color.Gray;
         }
 
-        [HarmonyPatch(TARGET_TYPE, "OnListboxItemsSelected")]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
         public static class Patch_OnListboxItemsSelected
         {
             public static void Postfix(
@@ -392,8 +364,7 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "EnableEditBoxes", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(bool), typeof(bool), typeof(bool) })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.EnableEditBoxes))]
         public static class Patch_EnableEditBoxes
         {
             public static void Postfix(bool enable)
@@ -403,11 +374,10 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "OnListboxDoubleClick")]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlListbox) })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxDoubleClick))]
         public static class Patch_OnListboxDoubleClick
         {
-            public static bool Prefix(object __instance, MyGuiControlListbox senderListbox, MyGuiControlSearchBox ___m_searchBox)
+            public static bool Prefix(MyTerminalGpsController __instance, MyGuiControlListbox senderListbox, MyGuiControlSearchBox ___m_searchBox)
             {
                 bool runOriginal = !(senderListbox.SelectedItems.FirstOrDefault() is NonGpsRow);
                 if (senderListbox.SelectedItems.FirstOrDefault() is GpsFolderRow folder)
@@ -417,15 +387,14 @@ namespace GpsFolders
                     else
                         currentFolderName = null;
 
-                    Instance.PopulateList();
+                    __instance.PopulateList();
                     return false;
                 }
                 return runOriginal;
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "ToggleShowOnHud")]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlListbox) })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.ToggleShowOnHud))]
         public static class Patch_ToggleShowOnHud
         {
             public static bool Prefix(MyGuiControlListbox senderListbox)
@@ -435,8 +404,7 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "OnNameChanged")]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlTextbox) })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnNameChanged))]
         static class Patch_OnNameChanged // called when the gps name field changes
         {
             public static bool Prefix(MyGuiControlTextbox senderTextbox, MyGuiControlListbox ___m_listboxGps)
@@ -472,8 +440,7 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "OnButtonPressedCopy", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlButton) })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnButtonPressedCopy))]
         public static class Patch_OnButtonPressedCopy
         {
             public static bool Prefix(MyGuiControlButton sender, MyGuiControlListbox ___m_listboxGps)
@@ -502,8 +469,7 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "Delete", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Delete))]
         public static class Patch_Delete
         {
             public static bool Prefix(MyGuiControlListbox ___m_listboxGps)
@@ -523,14 +489,11 @@ namespace GpsFolders
             }
         }
 
-        [HarmonyPatch(TARGET_TYPE, "Close", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { })]
+        [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Close))]
         public static class Patch_Close
         {
             public static void Postfix()
             {
-                Instance = null;
-
                 m_expandFoldersCheckbox = null;
                 m_showFolderOnHudButton = null;
                 m_hideFolderOnHudButton = null;
@@ -539,12 +502,5 @@ namespace GpsFolders
                 //MiscellaneousPatches.m_showDistanceColumnCheckbox = null;
             }
         }
-
-        //[HarmonyPatchTARGET_TYPE, "trySync", MethodType.Normal)]
-        //[HarmonyPatch(new Type[] { })]
-        //static class Patch_trySync
-        //{
-        //
-        //}
     }
 }

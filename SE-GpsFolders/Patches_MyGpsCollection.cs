@@ -3,12 +3,8 @@ using Sandbox.Game.Multiplayer;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using VRage.Game;
 using VRageMath;
 
@@ -16,7 +12,7 @@ namespace GpsFolders
 {
     static class MyGpsCollectionPatches
     {
-        [HarmonyPatch(typeof(MyGpsCollection), "ScanText", MethodType.Normal)]
+        [HarmonyPatch(typeof(MyGpsCollection), nameof(MyGpsCollection.ScanText))]
         [HarmonyPatch(new Type[] { typeof(string), typeof(string) })]
         static class Patch_ScanText
         {

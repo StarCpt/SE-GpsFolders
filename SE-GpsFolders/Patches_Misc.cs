@@ -4,16 +4,12 @@ using Sandbox.Game;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using VRage.Game;
 using VRage.Utils;
 using VRage;
 using VRageMath;
-using GpsFolders.Rows;
 
 namespace GpsFolders
 {
@@ -61,8 +57,7 @@ namespace GpsFolders
         //    }
         //}
 
-        [HarmonyPatch(typeof(MyGuiScreenTerminal), "CreateGpsPageControls", MethodType.Normal)]
-        [HarmonyPatch(new Type[] { typeof(MyGuiControlTabPage) })]
+        [HarmonyPatch(typeof(MyGuiScreenTerminal), nameof(MyGuiScreenTerminal.CreateGpsPageControls))]
         static class MyGuiScreenTerminal_CreateGpsPageControls
         {
             static void Postfix(MyGuiControlTabPage gpsPage)
