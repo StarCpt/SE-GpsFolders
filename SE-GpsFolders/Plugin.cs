@@ -13,7 +13,7 @@ using VRage.Utils;
 
 namespace GpsFolders
 {
-    public class Main : IPlugin
+    public class Plugin : IPlugin
     {
         public void Init(object gameInstance)
         {
