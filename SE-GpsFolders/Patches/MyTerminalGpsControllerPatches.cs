@@ -188,7 +188,7 @@ public static class MyTerminalGpsControllerPatches
             }
         }
 
-        ___m_listboxGps.ScrollToFirstSelection();
+        ___m_listboxGps.ScrollBar.Init(___m_listboxGps.Items.Count, ___m_listboxGps.VisibleRowsCount);
         if (___m_listboxGps.SelectedItems.Count != 0)
         {
             ___m_listboxGps.ScrollToFirstSelection();
