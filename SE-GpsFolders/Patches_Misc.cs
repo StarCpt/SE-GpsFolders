@@ -13,7 +13,8 @@ using VRageMath;
 
 namespace GpsFolders;
 
-static class MiscellaneousPatches
+[HarmonyPatch]
+public static class MiscellaneousPatches
 {
     //public static MyGuiControlCheckbox m_showDistanceColumnCheckbox;
     //public static bool showDistanceColumn = false;
@@ -58,96 +59,94 @@ static class MiscellaneousPatches
     //}
 
     [HarmonyPatch(typeof(MyGuiScreenTerminal), nameof(MyGuiScreenTerminal.CreateGpsPageControls))]
-    static class MyGuiScreenTerminal_CreateGpsPageControls
+    [HarmonyPostfix]
+    public static void CreateGpsPageControls_Postfix(MyGuiControlTabPage gpsPage)
     {
-        static void Postfix(MyGuiControlTabPage gpsPage)
-        {
-            MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
-            MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
-            MyGuiControlBase buttonToClipboard = gpsPage.GetControlByName("buttonToClipboard");
+        MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
+        MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
+        MyGuiControlBase buttonToClipboard = gpsPage.GetControlByName("buttonToClipboard");
             
-            MyGuiControlButton copyAllGpsesButton = new MyGuiControlButton
-            {
-                Text = "Copy ALL gpses to clipboard",
-                Position = new Vector2(buttonToClipboard.Position.X, buttonToClipboard.Position.Y + buttonToClipboard.Size.Y + 0.005f),
-                Name = "CopyAllGpsesButton",
-                OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_BOTTOM,
-                VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
-                IsAutoScaleEnabled = true,
-                IsAutoEllipsisEnabled = true,
-                ShowTooltipWhenDisabled = false,
-            };
-            copyAllGpsesButton.Size = new Vector2(buttonToClipboard.Size.X, buttonToClipboard.Size.Y);
-            copyAllGpsesButton.SetToolTip("Copy ALL gpses to clipboard");
-            copyAllGpsesButton.ButtonClicked += (source) => Helpers.ShowConfirmationDialog("Copy all gpses!", "Are you sure you want to copy ALL of your gpses to clipboard?", CopyAllGpsesToClipboardDialogCallback);
-            gpsPage.Controls.Add(copyAllGpsesButton);
-
-            //MyGuiControlTable tableIns = (MyGuiControlTable)gpsPage.Controls.GetControlByName("TableINS");
-            //tableIns.ColumnsCount = 2;
-            //tableIns.SetCustomColumnWidths(new float[2] { 0.75f, 0.25f });
-            //tableIns.SetColumnAlign(1, MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER);
-            //tableIns.SetColumnVisibility(1, showDistanceColumn);
-            //tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
-            //tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
-            //
-            //MyGuiControlLabel showDistanceLabel = new MyGuiControlLabel
-            //{
-            //    Position = new Vector2(-0.321f, -0.267f + 0.011f),
-            //    Name = "ShowDistanceLabel",
-            //    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
-            //    Text = MyTexts.GetString("Dist"),
-            //    TextScale = 0.7f,
-            //};
-            //gpsPage.Controls.Add(showDistanceLabel);
-            
-            //MyGuiControlCheckbox showDistanceCheckbox = new MyGuiControlCheckbox
-            //{
-            //    Position = new Vector2(-0.316f, -0.277f),
-            //    Name = "ShowDistanceCheckbox",
-            //    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-            //    IsChecked = showDistanceColumn,
-            //};
-            //showDistanceCheckbox.SetToolTip(new MyToolTips("Show Distance Column"));
-            //gpsPage.Controls.Add(showDistanceCheckbox);
-        }
-
-        private static void CopyAllGpsesToClipboardDialogCallback(MyGuiScreenMessageBox.ResultEnum result)
+        MyGuiControlButton copyAllGpsesButton = new MyGuiControlButton
         {
-            if (result == MyGuiScreenMessageBox.ResultEnum.YES && MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
-            {
-                SortedDictionary<string, List<MyGps>> gpsDict = new SortedDictionary<string, List<MyGps>>();
-                StringBuilder strb = new StringBuilder();
+            Text = "Copy ALL gpses to clipboard",
+            Position = new Vector2(buttonToClipboard.Position.X, buttonToClipboard.Position.Y + buttonToClipboard.Size.Y + 0.005f),
+            Name = "CopyAllGpsesButton",
+            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_BOTTOM,
+            VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
+            IsAutoScaleEnabled = true,
+            IsAutoEllipsisEnabled = true,
+            ShowTooltipWhenDisabled = false,
+        };
+        copyAllGpsesButton.Size = new Vector2(buttonToClipboard.Size.X, buttonToClipboard.Size.Y);
+        copyAllGpsesButton.SetToolTip("Copy ALL gpses to clipboard");
+        copyAllGpsesButton.ButtonClicked += (source) => Helpers.ShowConfirmationDialog("Copy all gpses!", "Are you sure you want to copy ALL of your gpses to clipboard?", CopyAllGpsesToClipboardDialogCallback);
+        gpsPage.Controls.Add(copyAllGpsesButton);
+
+        //MyGuiControlTable tableIns = (MyGuiControlTable)gpsPage.Controls.GetControlByName("TableINS");
+        //tableIns.ColumnsCount = 2;
+        //tableIns.SetCustomColumnWidths(new float[2] { 0.75f, 0.25f });
+        //tableIns.SetColumnAlign(1, MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER);
+        //tableIns.SetColumnVisibility(1, showDistanceColumn);
+        //tableIns.Size = new Vector2(showDistanceColumn ? 0.3275f : 0.29f, 0.5f);
+        //tableIns.PositionX = showDistanceColumn ? -0.47075f : -0.452f;
+        //
+        //MyGuiControlLabel showDistanceLabel = new MyGuiControlLabel
+        //{
+        //    Position = new Vector2(-0.321f, -0.267f + 0.011f),
+        //    Name = "ShowDistanceLabel",
+        //    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
+        //    Text = MyTexts.GetString("Dist"),
+        //    TextScale = 0.7f,
+        //};
+        //gpsPage.Controls.Add(showDistanceLabel);
+            
+        //MyGuiControlCheckbox showDistanceCheckbox = new MyGuiControlCheckbox
+        //{
+        //    Position = new Vector2(-0.316f, -0.277f),
+        //    Name = "ShowDistanceCheckbox",
+        //    OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
+        //    IsChecked = showDistanceColumn,
+        //};
+        //showDistanceCheckbox.SetToolTip(new MyToolTips("Show Distance Column"));
+        //gpsPage.Controls.Add(showDistanceCheckbox);
+    }
+
+    private static void CopyAllGpsesToClipboardDialogCallback(MyGuiScreenMessageBox.ResultEnum result)
+    {
+        if (result == MyGuiScreenMessageBox.ResultEnum.YES && MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
+        {
+            SortedDictionary<string, List<MyGps>> gpsDict = new SortedDictionary<string, List<MyGps>>();
+            StringBuilder strb = new StringBuilder();
                 
-                foreach (MyGps item in MySession.Static.Gpss[MySession.Static.LocalPlayerId].Values)
+            foreach (MyGps item in MySession.Static.Gpss[MySession.Static.LocalPlayerId].Values)
+            {
+                if (!item.TryGetFolderId(out string tag))
                 {
-                    if (!item.TryGetFolderId(out string tag))
-                    {
-                        tag = string.Empty;
-                    }
-
-                    if (!gpsDict.TryGetValue(tag, out List<MyGps> gpses))
-                    {
-                        gpsDict.Add(tag, gpses = new List<MyGps>());
-                    }
-                    gpses.Add(item);
+                    tag = string.Empty;
                 }
 
-                foreach (var item in gpsDict)
+                if (!gpsDict.TryGetValue(tag, out List<MyGps> gpses))
                 {
-                    foreach (var gps in item.Value)
-                    {
-                        strb.Append(gps.ToString());
-                        if (item.Key != string.Empty)
-                            strb.Append(item.Key).Append(':');
-                        strb.AppendLine();
-                    }
+                    gpsDict.Add(tag, gpses = new List<MyGps>());
                 }
+                gpses.Add(item);
+            }
 
-                if (strb.Length > 0)
+            foreach (var item in gpsDict)
+            {
+                foreach (var gps in item.Value)
                 {
-                    strb.Length--;
-                    MyVRage.Platform.System.Clipboard = strb.ToString();
+                    strb.Append(gps.ToString());
+                    if (item.Key != string.Empty)
+                        strb.Append(item.Key).Append(':');
+                    strb.AppendLine();
                 }
+            }
+
+            if (strb.Length > 0)
+            {
+                strb.Length--;
+                MyVRage.Platform.System.Clipboard = strb.ToString();
             }
         }
     }
