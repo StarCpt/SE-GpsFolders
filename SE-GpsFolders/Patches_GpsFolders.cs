@@ -377,7 +377,7 @@ static class MyTerminalGpsControllerPatches
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxDoubleClick))]
     public static class Patch_OnListboxDoubleClick
     {
-        public static bool Prefix(MyTerminalGpsController __instance, MyGuiControlListbox senderListbox, MyGuiControlSearchBox ___m_searchBox)
+        public static bool Prefix(MyGuiControlListbox senderListbox)
         {
             bool runOriginal = !(senderListbox.SelectedItems.FirstOrDefault() is NonGpsRow);
             if (senderListbox.SelectedItems.FirstOrDefault() is GpsFolderRow folder)
@@ -387,7 +387,7 @@ static class MyTerminalGpsControllerPatches
                 else
                     currentFolderName = null;
 
-                __instance.PopulateList();
+                MyGuiScreenTerminal.m_instance?.m_controllerGps?.PopulateList();
                 return false;
             }
             return runOriginal;
