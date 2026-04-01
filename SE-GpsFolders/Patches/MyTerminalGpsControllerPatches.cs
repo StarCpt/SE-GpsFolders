@@ -33,6 +33,8 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void Init_Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent)
     {
+        DeferredFolderChange.Clear();
+
         _expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox");
         _showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton");
         _hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton");
@@ -520,6 +522,7 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void Close_Postfix()
     {
+        DeferredFolderChange.Clear();
         _expandFoldersCheckbox = null;
         _showFolderOnHudButton = null;
         _hideFolderOnHudButton = null;

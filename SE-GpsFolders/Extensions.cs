@@ -92,32 +92,34 @@ public static class Extensions
 
         if (IsFolderIdValid(id) || id is null)
         {
-            gps.Description ??= "";
-
             // remove folder
-            if (gps.Description.StartsWith(startTag))
+            if (gps.Description is not null)
             {
-                int endIndex =
-                    gps.Description.Contains(endTag) ?
-                    gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
-                    gps.Description.Length;
-                if (endIndex > startIndex)
+                if (gps.Description.StartsWith(startTag))
                 {
-                    gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
+                    int endIndex =
+                        gps.Description.Contains(endTag) ?
+                        gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
+                        gps.Description.Length;
+                    if (endIndex > startIndex)
+                    {
+                        gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
+                    }
                 }
-            }
-            else if (gps.Description.StartsWith(startTagOld))
-            {
-                int endIndex = gps.Description.IndexOf(endTagOld, startIndexOld, Math.Min(gps.Description.Length - startIndexOld, startIndexOld + maxTagLength + 1));
-                if (endIndex > startIndexOld)
+                else if (gps.Description.StartsWith(startTagOld))
                 {
-                    gps.Description = gps.Description.Remove(0, endIndex + endTagOld.Length);
+                    int endIndex = gps.Description.IndexOf(endTagOld, startIndexOld, Math.Min(gps.Description.Length - startIndexOld, startIndexOld + maxTagLength + 1));
+                    if (endIndex > startIndexOld)
+                    {
+                        gps.Description = gps.Description.Remove(0, endIndex + endTagOld.Length);
+                    }
                 }
             }
 
             // add new folder
             if (IsFolderIdValid(id))
             {
+                gps.Description ??= "";
                 gps.Description = startTag + id + endTag + gps.Description;
             }
 
