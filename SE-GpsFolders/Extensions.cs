@@ -45,7 +45,7 @@ public static class Extensions
         return (folder = gps.GetFolderIdOld()) != null;
     }
 
-    public static string GetFolderIdOld(this MyGps gps)
+    private static string GetFolderIdOld(this MyGps gps)
     {
         int endIndex;
         if (gps.Description != null &&
@@ -61,7 +61,7 @@ public static class Extensions
         return null;
     }
 
-    public static string GetFolderId(this MyGps gps)
+    private static string GetFolderId(this MyGps gps)
     {
         if (gps.Description != null &&
             gps.Description.StartsWith(startTag))

@@ -56,7 +56,7 @@ public static class Helpers
             return false;
         }
 
-        result = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => i.Value.GetFolderId() == folderId).Select(i => i.Value).ToArray();
+        result = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => i.Value.TryGetFolderId(out string gpsFolderId) && gpsFolderId == folderId).Select(i => i.Value).ToArray();
         return result.Count() > 0;
     }
 
@@ -69,7 +69,7 @@ public static class Helpers
 
         foreach (MyGps gps in gpses)
         {
-            if (gps.GetFolderId() == folderId)
+            if (gps.TryGetFolderId(out string gpsFolderId) && gpsFolderId == folderId)
             {
                 gps.ShowOnHud = showOnHud;
                 MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
