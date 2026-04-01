@@ -23,12 +23,6 @@ public static class Extensions
     private const string endTag = "\n";
     private static readonly int startIndex = startTag.Length;
 
-    public static MyGuiHighlightTexture SetSize(this MyGuiHighlightTexture texture, Vector2 size)
-    {
-        texture.SizePx = size;
-        return texture;
-    }
-
     public static bool TryGetFolderId(this MyGuiControlListbox.Item row, out string tag)
     {
         if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
@@ -124,7 +118,7 @@ public static class Extensions
             // add new folder
             if (IsFolderIdValid(id))
             {
-                gps.Description = startTag + id + endTag + (!gps.Description.StartsWith("\n") ? "\n" : "") + gps.Description;
+                gps.Description = startTag + id + endTag + gps.Description;
             }
 
             MySession.Static.Gpss.SendModifyGpsRequest(MySession.Static.LocalPlayerId, gps);
@@ -134,7 +128,7 @@ public static class Extensions
     public static bool IsFolderIdValid(string? folderName)
     {
         return !string.IsNullOrWhiteSpace(folderName) &&
-            folderName.Length >= minTagLength &&
+            folderName!.Length >= minTagLength &&
             folderName.Length <= maxTagLength &&
             !folderName.EndsWith("GPS") &&
             !folderName.Contains(":");
