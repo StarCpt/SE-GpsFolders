@@ -131,7 +131,7 @@ public static class MyTerminalGpsControllerPatches
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Init))]
     [HarmonyPostfix]
-    public static void Init_Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent, MyGuiControlSearchBox ___m_searchBox, MyGuiControlListbox ___m_listboxGps)
+    public static void Init_Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent)
     {
         (m_expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox")).IsCheckedChanged += delegate
         {
@@ -150,16 +150,28 @@ public static class MyTerminalGpsControllerPatches
         };
 
         m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox");
-        m_gpsFolderNameTextBox.EnterPressed += textbox =>
+        m_gpsFolderNameTextBox.EnterPressed += textbox => ApplyFolderName(textbox.Text);
+        m_gpsFolderNameTextBox.FocusChanged += (textbox, focused) =>
         {
-            ___m_listboxGps.SelectedItems.Where(i => i != null && i is not NonGpsRow && i.UserData is MyGps).ForEach(i => ((MyGps)i.UserData).SetFolderId(textbox.Text));
-            __instance.PopulateList();
+            if (!focused)
+            {
+                ApplyFolderName(((MyGuiControlTextbox)textbox).Text);
+            }
         };
         m_gpsFolderNameTextBox.Enabled = false;
 
+        __instance.m_panelGpsName.EnterPressed += textbox => SaveGpsName();
+        __instance.m_panelGpsName.FocusChanged += (textbox, focused) =>
+        {
+            if (!focused)
+            {
+                SaveGpsName();
+            }
+        };
+
         void SetSelectedFoldersShowOnHud(bool showOnHud)
         {
-            foreach (MyGuiControlListbox.Item item in ___m_listboxGps.SelectedItems)
+            foreach (MyGuiControlListbox.Item item in __instance.m_listboxGps.SelectedItems)
             {
                 if (item is GpsFolderRow folder)
                 {
@@ -171,20 +183,51 @@ public static class MyTerminalGpsControllerPatches
                 }
             }
         }
+
+        void ApplyFolderName(string? newFolder)
+        {
+            if (string.IsNullOrWhiteSpace(newFolder))
+            {
+                newFolder = null;
+            }
+
+            bool folderChanged = false;
+
+            foreach (var gps in __instance.m_listboxGps.SelectedItems.Where(i => i != null && i is not NonGpsRow && i.UserData is MyGps).Select(i => (MyGps)i.UserData))
+            {
+                if (gps.GetFolderId() != newFolder)
+                {
+                    gps.SetFolderId(newFolder);
+                    folderChanged = true;
+                }
+            }
+
+            if (folderChanged)
+            {
+                __instance.PopulateList();
+            }
+        }
+
+        void SaveGpsName()
+        {
+            if (__instance.m_listboxGps.SelectedItems.Count == 1 && __instance.m_listboxGps.SelectedItems[0] is not NonGpsRow)
+            {
+                __instance.TrySync();
+            }
+        }
+    }
+
+    private static void M_panelGpsName_FocusChanged(MyGuiControlBase arg1, bool arg2)
+    {
+        throw new NotImplementedException();
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.PopulateList))]
     [HarmonyPrefix]
     public static bool PopulateList_Prefix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps, List<MyGps> ___m_gpsListCache)
     {
-        //object selectedRow = ___m_tableIns.SelectedRow?.UserData;
-        //int? selectedIndex = ___m_tableIns.SelectedRowIndex;
-
         ___m_gpsListCache.Clear();
-        MyGps[] selectedGpses = ___m_listboxGps.SelectedItems.Select(i => (MyGps)i.UserData).ToArray();
-
-        MyGps lastSelectedGps = selectedGpses.LastOrDefault();
-        int lastSelectedItemIndex = selectedGpses.Length > 0 ? ___m_listboxGps.Items.IndexOf(___m_listboxGps.GetLastSelected()) : -1;
+        var selectedItems = ___m_listboxGps.SelectedItems.ToList();
 
         __instance.ClearList();
 
@@ -195,47 +238,47 @@ public static class MyTerminalGpsControllerPatches
             var itemsToAdd = gpsListView.GetView(ref currentFolderName, ___m_searchString, expandFoldersChecked);
             ___m_gpsListCache.AddRange(itemsToAdd.Select(i => (MyGps)i.UserData));
 
-            //___m_gpsListCache.Sort(SortingComparison);
-            //AddRangeToList(___m_listboxGps, ___m_gpsListCache);
             itemsToAdd.ForEach(i => ___m_listboxGps.Add(i));
         }
 
-        __instance.EnableEditBoxes(enable: false);
-        if (selectedGpses.Length > 0)
+        __instance.EnableEditBoxes(false);
+
+        if (selectedItems.Count > 0)
         {
-            foreach (MyGuiControlListbox.Item item in ___m_listboxGps.Items)
+            foreach (var row in selectedItems)
             {
-                if (selectedGpses.Contains((MyGps)item.UserData))
+                int index = -1;
+                if (row is UnsortedGpsFolderRow)
                 {
-                    ___m_listboxGps.SelectedItems.Add(item);
-                    __instance.SetEnabledStates(___m_listboxGps);
-                    __instance.SetDeleteButtonEnabled(enabled: true);
+                    // nothing
+                    index = ___m_listboxGps.Items.FindIndex(i => i is UnsortedGpsFolderRow);
                 }
-            }
-
-            if (___m_listboxGps.SelectedItems.Count == 0 && selectedGpses.Length != 0)
-            {
-                if (lastSelectedItemIndex >= ___m_listboxGps.Items.Count)
+                else if (row is GpsFolderRow folderRow)
                 {
-                    lastSelectedItemIndex = ___m_listboxGps.Items.Count - 1;
+                    index = ___m_listboxGps.Items.FindIndex(i => i is GpsFolderRow row && row.Name == folderRow.Name);
+                }
+                else // is normal gps
+                {
+                    index = ___m_listboxGps.Items.FindIndex(i => i is not NonGpsRow && (MyGps)i.UserData == (MyGps)row.UserData);
                 }
 
-                if (lastSelectedItemIndex != -1)
+                if (index != -1)
                 {
-                    ___m_listboxGps.SelectSingleItem(___m_listboxGps.Items[lastSelectedItemIndex]);
-                    if (___m_listboxGps.SelectedItems.Count != 0)
-                    {
-                        __instance.SetDeleteButtonEnabled(enabled: true);
-                        __instance.FillRight((MyGps)___m_listboxGps.SelectedItems[0].UserData);
-                    }
+                    ___m_listboxGps.SelectedItems.Add(___m_listboxGps.Items[index]);
                 }
             }
         }
 
         ___m_listboxGps.ScrollToFirstSelection();
-        if (selectedGpses.Length > 0)
+        if (___m_listboxGps.SelectedItems.Count != 0)
         {
+            ___m_listboxGps.ScrollToFirstSelection();
             __instance.FillRight();
+        }
+        else
+        {
+            ___m_listboxGps.ScrollToolbarToTop();
+            __instance.ClearRight();
         }
 
         return false;
@@ -245,90 +288,125 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void PopulateList_Postfix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps)
     {
-        m_showFolderOnHudButton.SetEnabled(string.IsNullOrWhiteSpace(___m_searchString));
-        m_hideFolderOnHudButton.SetEnabled(string.IsNullOrWhiteSpace(___m_searchString));
-    }
-
-    private static void AddRangeToList(MyGuiControlListbox m_listboxGps, IEnumerable<MyGps> gpses)
-    {
-        foreach (var gps in gpses)
-        {
-            var strb = new StringBuilder(gps.Name);
-            MyGuiControlListbox.Item item = new MyGuiControlListbox.Item(ref strb, strb.ToString(), null, gps);
-            item.ColorMask = MyTerminalGpsController.GetGpsColor(gps);
-            m_listboxGps.Add(item);
-        }
+        m_showFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
+        m_hideFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
-    [HarmonyPostfix]
-    public static void OnListboxItemsSelected_Postfix(
-        MyGuiControlListbox senderListbox,
-        MyGuiControlTextbox ___m_panelGpsName,
-        MyGuiControlMultilineEditableText ___m_panelGpsDesc,
-        MyGuiControlTextbox ___m_xCoord,
-        MyGuiControlTextbox ___m_yCoord,
-        MyGuiControlTextbox ___m_zCoord,
-        MyGuiControlSlider ___m_sliderHue,
-        MyGuiControlSlider ___m_sliderSaturation,
-        MyGuiControlSlider ___m_sliderValue,
-        MyGuiControlTextbox ___m_textBoxHex,
-        MyGuiControlCheckbox ___m_checkGpsShowOnHud,
-        MyGuiControlCheckbox ___m_checkGpsAlwaysVisible,
-        MyGuiControlButton ___m_buttonCopy,
-        MyGuiControlSearchBox ___m_searchBox)
+    [HarmonyPrefix]
+    public static bool OnListboxItemsSelected_Prefix(MyTerminalGpsController __instance, MyGuiControlListbox senderListbox)
     {
-        var selectedItem = senderListbox.GetLastSelected();
-        if (selectedItem is NonGpsRow)
+        __instance.TrySync();
+        if (senderListbox.SelectedItems.Count > 0 && senderListbox.SelectedItems.Count(i => i is NonGpsRow) > 0)
         {
-            ___m_panelGpsDesc.Enabled = false;
-            ___m_xCoord.Enabled = false;
-            ___m_yCoord.Enabled = false;
-            ___m_zCoord.Enabled = false;
-            ___m_sliderHue.Enabled = false;
-            ___m_sliderSaturation.Enabled = false;
-            ___m_sliderValue.Enabled = false;
-            ___m_textBoxHex.Enabled = false;
-            ___m_checkGpsShowOnHud.Enabled = false;
-            ___m_checkGpsAlwaysVisible.Enabled = false;
+            __instance.SetDeleteButtonEnabled(true);
+            __instance.SetEnabledStates(senderListbox);
 
-            if (m_gpsFolderNameTextBox != null)
+            foreach (MyGuiControlListbox.Item item in senderListbox.SelectedItems)
             {
-                m_gpsFolderNameTextBox.Enabled = false;
-                m_gpsFolderNameTextBox.Text = "";
+                if (item is not NonGpsRow)
+                {
+                    item.ColorMask = MyTerminalGpsController.GetGpsColor((MyGps)item.UserData);
+                }
             }
 
-            if (selectedItem is GpsFolderRow)
-            {
-                ___m_panelGpsName.Enabled = string.IsNullOrWhiteSpace(___m_searchBox.SearchText);
-                ___m_buttonCopy.Enabled = true;
+            int folderCount = senderListbox.SelectedItems.Count(i => i is NonGpsRow);
+            int gpsCount = senderListbox.SelectedItems.Count - folderCount;
 
-                m_showFolderOnHudButton?.SetEnabled(true);
-                m_hideFolderOnHudButton?.SetEnabled(true);
-            }
-            else if (selectedItem is UnsortedGpsFolderRow)
-            {
-                ___m_panelGpsName.Enabled = false;
-                ___m_buttonCopy.Enabled = true;
+            // disable edit boxes if gps and folders are mixed, or if more than 1 folder is selected
+            // disable all edit boxes except name if 1 folder is selected
+            // vanilla behavior if no folders are selected
 
-                m_showFolderOnHudButton?.SetEnabled(true);
-                m_hideFolderOnHudButton?.SetEnabled(true);
+            if (folderCount != 0 && gpsCount != 0)
+            {
+                __instance.ClearRight();
+
+                // disable all edit boxes
+                __instance.EnableEditBoxes(false, false, false);
+                __instance.m_buttonCopy.Enabled = false;
+
+                m_gpsFolderNameTextBox?.Enabled = false;
+                m_gpsFolderNameTextBox?.Text = "";
+
+                m_showFolderOnHudButton?.Enabled = false;
+                m_hideFolderOnHudButton?.Enabled = false;
             }
+            else if (folderCount > 0)
+            {
+                __instance.EnableEditBoxes(false, false, true);
+                __instance.m_buttonCopy.Enabled = true;
+
+                if (folderCount == 1 && senderListbox.SelectedItems[0] is GpsFolderRow folderRow)
+                {
+                    __instance.ClearRightExceptName(folderRow.Name);
+                    __instance.m_panelGpsName.Text = folderRow.Name;
+                    __instance.m_panelGpsName.Enabled = true;
+                }
+                else
+                {
+                    __instance.ClearRight();
+                }
+
+                m_gpsFolderNameTextBox?.Enabled = false;
+                m_gpsFolderNameTextBox?.Text = "";
+
+                m_showFolderOnHudButton?.Enabled = true;
+                m_hideFolderOnHudButton?.Enabled = true;
+            }
+            else // vanilla behavior
+            {
+                m_gpsFolderNameTextBox?.Enabled = true;
+                m_showFolderOnHudButton?.Enabled = false;
+                m_hideFolderOnHudButton?.Enabled = false;
+                return true;
+            }
+
+            return false;
         }
         else
         {
-            ___m_checkGpsShowOnHud.Enabled = true;
-            ___m_checkGpsAlwaysVisible.Enabled = true;
-
-            m_showFolderOnHudButton?.SetEnabled(false);
-            m_hideFolderOnHudButton?.SetEnabled(false);
-            if (m_gpsFolderNameTextBox != null)
+            if (senderListbox.SelectedItems.Count > 0)
             {
-                if (selectedItem != null && selectedItem.TryGetFolderId(out string tag))
-                    m_gpsFolderNameTextBox.Text = tag;
-                else
-                    m_gpsFolderNameTextBox.Text = "";
+                string? folderId = ((MyGps)senderListbox.SelectedItems[0].UserData).GetFolderId();
+                bool allGpsesAreInSameFolder = true;
+                foreach (var item in senderListbox.SelectedItems)
+                {
+                    if (folderId != ((MyGps)item.UserData).GetFolderId())
+                    {
+                        allGpsesAreInSameFolder = false;
+                        break;
+                    }
+                }
+
+                folderId ??= string.Empty;
+
+                if (m_gpsFolderNameTextBox != null)
+                {
+                    m_gpsFolderNameTextBox.Enabled = true;
+                    m_gpsFolderNameTextBox.Text = allGpsesAreInSameFolder ? folderId : "";
+                }
             }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.SetEnabledStates))]
+    [HarmonyPrefix]
+    public static bool SetEnabledStates_Prefix(MyTerminalGpsController __instance, MyGuiControlListbox senderListbox)
+    {
+        int folderCount = senderListbox.SelectedItems.Count(i => i is NonGpsRow);
+        int gpsCount = senderListbox.SelectedItems.Count - folderCount;
+
+        if (folderCount != 0)
+        {
+            return false;
+        }
+        else // vanilla behavior
+        {
+            m_gpsFolderNameTextBox?.Enabled = true;
+            m_showFolderOnHudButton?.Enabled = false;
+            m_hideFolderOnHudButton?.Enabled = false;
+            return true;
         }
     }
 
@@ -336,8 +414,7 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void EnableEditBoxes_Postfix(bool enable)
     {
-        if (m_gpsFolderNameTextBox != null)
-            m_gpsFolderNameTextBox.Enabled = enable;
+        m_gpsFolderNameTextBox?.Enabled = enable;
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxDoubleClick))]
@@ -368,15 +445,15 @@ public static class MyTerminalGpsControllerPatches
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnNameChanged))]
     [HarmonyPrefix]
-    public static bool OnNameChanged_Prefix(MyGuiControlTextbox senderTextbox, MyGuiControlListbox ___m_listboxGps) // called when the gps name field changes
-        {
-        if (___m_listboxGps.SelectedItems.FirstOrDefault() == null)
+    public static bool OnNameChanged_Prefix(MyTerminalGpsController __instance, MyGuiControlTextbox senderTextbox) // called when the gps name field changes
+    {
+        if (__instance.m_listboxGps.SelectedItems.FirstOrDefault() == null)
         {
             return false;
         }
 
-        bool runOriginal = !(___m_listboxGps.SelectedItems.FirstOrDefault() is NonGpsRow);
-        MyGuiControlListbox.Item selectedRow = ___m_listboxGps.SelectedItems.FirstOrDefault();
+        bool runOriginal = !(__instance.m_listboxGps.SelectedItems.FirstOrDefault() is NonGpsRow);
+        MyGuiControlListbox.Item selectedRow = __instance.m_listboxGps.SelectedItems.FirstOrDefault();
 
         if (selectedRow is GpsFolderRow folder)
         {
@@ -389,11 +466,11 @@ public static class MyTerminalGpsControllerPatches
                     currentFolderName = newFolderName;
                 }
 
-                ___m_listboxGps.Clear();
-                gpsListView.GetView(ref currentFolderName, gpsListView.LastSearchText, expandFoldersChecked).ForEach(row => ___m_listboxGps.Add(row));
+                __instance.ClearList();
+                gpsListView.GetView(ref currentFolderName, gpsListView.LastSearchText, expandFoldersChecked).ForEach(row => __instance.m_listboxGps.Add(row));
 
-                ___m_listboxGps.SelectSingleItem(___m_listboxGps.Items.FirstOrDefault(i => i is GpsFolderRow row && row.Name == newFolderName));
-                ___m_listboxGps.ScrollToFirstSelection();
+                __instance.m_listboxGps.SelectSingleItem(__instance.m_listboxGps.Items.FirstOrDefault(i => i is GpsFolderRow row && row.Name == newFolderName));
+                __instance.m_listboxGps.ScrollToFirstSelection();
             }
         }
 

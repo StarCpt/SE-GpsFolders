@@ -1,5 +1,6 @@
 ﻿using GpsFolders.Rows;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.Screens.Terminal;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
 using System;
@@ -40,9 +41,18 @@ public static class Extensions
 
     public static bool TryGetFolderId(this MyGps gps, out string folder)
     {
-        if ((folder = gps.GetFolderId()) != null)
+        if ((folder = gps.GetFolderIdInternal()) != null)
             return true;
         return (folder = gps.GetFolderIdOld()) != null;
+    }
+
+    public static string? GetFolderId(this MyGps gps)
+    {
+        if (TryGetFolderId(gps, out string folder))
+        {
+            return folder;
+        }
+        return null;
     }
 
     private static string GetFolderIdOld(this MyGps gps)
@@ -61,7 +71,7 @@ public static class Extensions
         return null;
     }
 
-    private static string GetFolderId(this MyGps gps)
+    private static string GetFolderIdInternal(this MyGps gps)
     {
         if (gps.Description != null &&
             gps.Description.StartsWith(startTag))
@@ -79,15 +89,7 @@ public static class Extensions
         return null;
     }
 
-    public static void SetFolderId(this MyGuiControlListbox.Item row, string id)
-    {
-        if (row != null && !(row.UserData is NonGpsRow) && row.UserData is MyGps gps)
-        {
-            gps.SetFolderId(id);
-        }
-    }
-
-    public static void SetFolderId(this MyGps gps, string id)
+    public static void SetFolderId(this MyGps gps, string? id)
     {
         if (id != null && (IsFolderIdValid(id) || string.IsNullOrWhiteSpace(id)))
         {
@@ -134,14 +136,6 @@ public static class Extensions
             !folderName.Contains(":");
     }
 
-    public static void SetEnabled(this MyGuiControlBase control, bool enabled)
-    {
-        if (control != null)
-        {
-            control.Enabled = enabled;
-        }
-    }
-
     public static void OrderedInsert<T>(this List<T> list, T value, Comparison<T> comparer)
     {
         int i = 0;
@@ -158,5 +152,31 @@ public static class Extensions
         {
             list.Add(value);
         }
+    }
+
+    public static void ClearRightExceptName(this MyTerminalGpsController controller, string gpsNameTextboxText, bool clearMultiSelectValues = true)
+    {
+        controller.UnhookSyncEvents(clearMultiSelectValues);
+        controller.m_panelGpsDesc.Clear();
+        controller.m_xCoord.Text = "";
+        controller.m_yCoord.Text = "";
+        controller.m_zCoord.Text = "";
+        if (clearMultiSelectValues)
+        {
+            controller.m_textBoxHex.Text = "";
+            controller.m_sliderValue.Value = 0f;
+            controller.m_sliderSaturation.Value = 0f;
+            controller.m_sliderHue.Value = 0f;
+            controller.m_checkGpsShowOnHud.IsChecked = false;
+            controller.m_checkGpsAlwaysVisible.IsChecked = false;
+        }
+        controller.m_previousHash = null;
+        controller.RefreshGpsColorControlsTooltips(clear: true);
+        controller.HookSyncEvents(clearMultiSelectValues);
+        controller.m_needsSyncName = false;
+        controller.m_needsSyncDesc = false;
+        controller.m_needsSyncX = false;
+        controller.m_needsSyncY = false;
+        controller.m_needsSyncZ = false;
     }
 }

@@ -120,10 +120,7 @@ public static class MiscellaneousPatches
                 
             foreach (MyGps item in MySession.Static.Gpss[MySession.Static.LocalPlayerId].Values)
             {
-                if (!item.TryGetFolderId(out string tag))
-                {
-                    tag = string.Empty;
-                }
+                string tag = item.GetFolderId() ?? string.Empty;
 
                 if (!gpsDict.TryGetValue(tag, out List<MyGps> gpses))
                 {
