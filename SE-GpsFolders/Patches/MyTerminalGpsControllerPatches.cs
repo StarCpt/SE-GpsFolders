@@ -8,6 +8,7 @@ using Sandbox.Graphics.GUI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using VRage;
 
@@ -371,6 +372,57 @@ public static class MyTerminalGpsControllerPatches
         }
 
         return runOriginal;
+    }
+
+    [HarmonyPatch]
+    static class Patch_OnNameChanged_FindInsertionIndex
+    {
+        [HarmonyTargetMethod]
+        public static MethodInfo TargetMethod()
+        {
+            return AccessTools.GetDeclaredMethods(typeof(MyTerminalGpsController)).Single(i => i.Name.Contains("<OnNameChanged>g__FindInsertionIndex"));
+        }
+
+        [HarmonyPrefix]
+        public static bool Prefix(IReadOnlyList<MyGuiControlListbox.Item> items, MyGuiControlListbox.Item item, ref int __result)
+        {
+            string? folderId = ((MyGps)item.UserData).GetFolderId();
+            int firstFolderItemIndex = items.Findindex(i => folderId is null ? i is UnsortedGpsFolderRow : (i is GpsFolderRow folderRow && folderRow.Name == folderId));
+            if (firstFolderItemIndex is -1)
+            {
+                __result = items.Count;
+                return false;
+            }
+            firstFolderItemIndex++;
+
+            int lastFolderItemIndex = items.Count - 1;
+            for (int i = firstFolderItemIndex + 1; i < items.Count; i++)
+            {
+                if (items[i] is NonGpsRow)
+                {
+                    lastFolderItemIndex = i - 1;
+                    break;
+                }
+            }
+
+            int lowerBound = firstFolderItemIndex;
+            int upperBound = lastFolderItemIndex + 1;
+            while (lowerBound < upperBound)
+            {
+                int num3 = (lowerBound + upperBound) / 2;
+                if (item.Text.CompareToIgnoreCase(items[num3].Text) > 0)
+                {
+                    lowerBound = num3 + 1;
+                }
+                else
+                {
+                    upperBound = num3;
+                }
+            }
+
+            __result = lowerBound;
+            return false;
+        }
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnButtonPressedCopy))]
