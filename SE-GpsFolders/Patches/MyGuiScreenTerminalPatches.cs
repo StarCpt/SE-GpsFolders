@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using Sandbox.Game;
 using Sandbox.Game.Gui;
+using Sandbox.Game.Localization;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
@@ -39,38 +40,26 @@ public static class MyGuiScreenTerminalPatches
         expandFoldersCheckbox.SetToolTip(new MyToolTips("Expand Folders"));
         gpsPage.Controls.Add(expandFoldersCheckbox);
 
-        MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
-        MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
+        // put indeterminate checkboxes for folder use in the same spots as the showOnHud/alwaysVisible ones
 
-        MyGuiControlButton showFolderOnHudButton = new MyGuiControlButton
+        MyGuiControlBase checkboxShowOnHud = gpsPage.GetControlByName("checkGpsShowOnHud");
+        MyGuiControlBase checkboxAlwaysVisible = gpsPage.GetControlByName("checkGpsAlwaysVisible");
+        CustomIndeterminateCheckbox checkboxFolderShowOnHud = new(checkboxShowOnHud.Position, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_CENTER)
         {
-            Text = "Show All",
-            Position = new Vector2(buttonFromCurrent.Position.X + 0.43f + 0.001f, buttonFromCurrent.Position.Y),
-            Name = "ShowFolderOnHudButton",
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-            VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
-            IsAutoScaleEnabled = true,
-            IsAutoEllipsisEnabled = true,
-            ShowTooltipWhenDisabled = false,
+            Name = "checkFolderShowOnHud",
+            Visible = false,
+            SkipIndeterminateState = true,
         };
-        showFolderOnHudButton.Size = new Vector2(textGpsY.Size.X / 2.06f, 48f / MyGuiConstants.GUI_OPTIMAL_SIZE.Y);
-        showFolderOnHudButton.SetToolTip("Show all entries in the folder on HUD");
-        gpsPage.Controls.Add(showFolderOnHudButton);
-
-        MyGuiControlButton hideFolderOnHudButton = new MyGuiControlButton
+        CustomIndeterminateCheckbox checkboxFolderAlwaysVisible = new(checkboxAlwaysVisible.Position, originAlign: MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_CENTER)
         {
-            Text = "Hide All",
-            Position = new Vector2(showFolderOnHudButton.Position.X + textGpsY.Size.X + 0.0002f, showFolderOnHudButton.Position.Y),
-            Name = "HideFolderOnHudButton",
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_TOP,
-            VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
-            IsAutoScaleEnabled = true,
-            IsAutoEllipsisEnabled = true,
-            ShowTooltipWhenDisabled = false,
+            Name = "checkFolderAlwaysVisible",
+            Visible = false,
+            SkipIndeterminateState = true,
         };
-        hideFolderOnHudButton.Size = showFolderOnHudButton.Size;
-        hideFolderOnHudButton.SetToolTip("Hide all entries in the folder from HUD");
-        gpsPage.Controls.Add(hideFolderOnHudButton);
+        checkboxFolderShowOnHud.SetTooltip("Display GPS markers in this folder on the HUD.");
+        checkboxFolderAlwaysVisible.SetTooltip("Prevents GPS markers in this folder from getting clustered or fading out.");
+        gpsPage.Controls.Add(checkboxFolderShowOnHud);
+        gpsPage.Controls.Add(checkboxFolderAlwaysVisible);
 
         MyGuiControlLabel gpsDescriptionLabel = (MyGuiControlLabel)gpsPage.GetControlByName("labelGpsDesc");
         MyGuiControlMultilineEditableText gpsDescriptionText = (MyGuiControlMultilineEditableText)gpsPage.GetControlByName("textGpsDesc");

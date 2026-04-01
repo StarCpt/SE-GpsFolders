@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using VRage;
+using VRage.Game;
 
 #pragma warning disable IDE0051
 namespace GpsFolders.Patches;
@@ -22,9 +23,9 @@ public static class MyTerminalGpsControllerPatches
     static bool _expandFolders = false;
 
     static MyGuiControlCheckbox _expandFoldersCheckbox;
-    static MyGuiControlButton _showFolderOnHudButton;
-    static MyGuiControlButton _hideFolderOnHudButton;
     static MyGuiControlTextbox _gpsFolderNameTextBox;
+    static CustomIndeterminateCheckbox _checkboxFolderShowOnHud;
+    static CustomIndeterminateCheckbox _checkboxFolderAlwaysVisible;
     public static GpsFolderListView gpsListView;
 
     static bool _selectingItem = false;
@@ -36,9 +37,9 @@ public static class MyTerminalGpsControllerPatches
         DeferredFolderChange.Clear();
 
         _expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox");
-        _showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton");
-        _hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton");
         _gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox");
+        _checkboxFolderShowOnHud = (CustomIndeterminateCheckbox)controlsParent.Controls.GetControlByName("checkFolderShowOnHud");
+        _checkboxFolderAlwaysVisible = (CustomIndeterminateCheckbox)controlsParent.Controls.GetControlByName("checkFolderAlwaysVisible");
 
         _expandFoldersCheckbox.IsChecked = _expandFolders;
         _expandFoldersCheckbox.IsCheckedChanged += delegate
@@ -46,9 +47,6 @@ public static class MyTerminalGpsControllerPatches
             _expandFolders = !_expandFolders;
             __instance.PopulateList();
         };
-
-        _showFolderOnHudButton.ButtonClicked += _ => SetSelectedFoldersShowOnHud(true);
-        _hideFolderOnHudButton.ButtonClicked += _ => SetSelectedFoldersShowOnHud(false);
 
         _gpsFolderNameTextBox.TextChanged += OnFolderNameTextboxTextChanged;
         _gpsFolderNameTextBox.EnterPressed += textbox => DeferredFolderChange.Apply(__instance);
@@ -60,6 +58,42 @@ public static class MyTerminalGpsControllerPatches
             }
         };
 
+        _checkboxFolderShowOnHud.IsCheckedChanged += checkbox =>
+        {
+            if (checkbox.State != CheckStateEnum.Indeterminate)
+            {
+                foreach (var item in __instance.m_listboxGps.SelectedItems)
+                {
+                    if (item is GpsFolderRow folderRow)
+                    {
+                        Helpers.SetFolderShowOnHud(folderRow.Name, checkbox.State is CheckStateEnum.Checked);
+                    }
+                    else if (item is UnsortedGpsFolderRow)
+                    {
+                        Helpers.SetFolderShowOnHud(null, checkbox.State is CheckStateEnum.Checked);
+                    }
+                }
+            }
+        };
+
+        _checkboxFolderAlwaysVisible.IsCheckedChanged += checkbox =>
+        {
+            if (checkbox.State != CheckStateEnum.Indeterminate)
+            {
+                foreach (var item in __instance.m_listboxGps.SelectedItems)
+                {
+                    if (item is GpsFolderRow folderRow)
+                    {
+                        Helpers.SetFolderAlwaysVisible(folderRow.Name, checkbox.State is CheckStateEnum.Checked);
+                    }
+                    else if (item is UnsortedGpsFolderRow)
+                    {
+                        Helpers.SetFolderAlwaysVisible(null, checkbox.State is CheckStateEnum.Checked);
+                    }
+                }
+            }
+        };
+
         __instance.m_panelGpsName.EnterPressed += textbox => SaveGpsName();
         __instance.m_panelGpsName.FocusChanged += (textbox, focused) =>
         {
@@ -68,21 +102,6 @@ public static class MyTerminalGpsControllerPatches
                 SaveGpsName();
             }
         };
-
-        void SetSelectedFoldersShowOnHud(bool showOnHud)
-        {
-            foreach (MyGuiControlListbox.Item item in __instance.m_listboxGps.SelectedItems)
-            {
-                if (item is GpsFolderRow folder)
-                {
-                    Helpers.SetFolderShowOnHud(folder.Name, showOnHud);
-                }
-                else if (item is UnsortedGpsFolderRow separator)
-                {
-                    Helpers.SetUnsortedFolderShowOnHud(showOnHud);
-                }
-            }
-        }
 
         void SaveGpsName()
         {
@@ -204,14 +223,6 @@ public static class MyTerminalGpsControllerPatches
         return false;
     }
 
-    [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.PopulateList))]
-    [HarmonyPostfix]
-    public static void PopulateList_Postfix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps)
-    {
-        _showFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
-        _hideFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
-    }
-
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
     [HarmonyPrefix]
     public static bool OnListboxItemsSelected_Prefix(MyTerminalGpsController __instance, MyGuiControlListbox senderListbox)
@@ -230,50 +241,6 @@ public static class MyTerminalGpsControllerPatches
                 {
                     item.ColorMask = MyTerminalGpsController.GetGpsColor((MyGps)item.UserData);
                 }
-            }
-
-            int folderCount = senderListbox.SelectedItems.Count(i => i is NonGpsRow);
-            int gpsCount = senderListbox.SelectedItems.Count - folderCount;
-
-            // disable edit boxes if gps and folders are mixed, or if more than 1 folder is selected
-            // disable all edit boxes except name if 1 folder is selected
-            // vanilla behavior if no folders are selected
-
-            if (folderCount != 0 && gpsCount != 0)
-            {
-                __instance.ClearRight();
-
-                // disable all edit boxes
-                __instance.EnableEditBoxes(false, false, false);
-                __instance.m_buttonCopy.Enabled = false;
-
-                _gpsFolderNameTextBox?.Enabled = false;
-                SetFolderNameTextboxTextNoEvent("");
-
-                _showFolderOnHudButton?.Enabled = false;
-                _hideFolderOnHudButton?.Enabled = false;
-            }
-            else if (folderCount > 0)
-            {
-                __instance.EnableEditBoxes(false, false, true);
-                __instance.m_buttonCopy.Enabled = true;
-
-                if (folderCount == 1 && senderListbox.SelectedItems[0] is GpsFolderRow folderRow)
-                {
-                    __instance.ClearRightExceptName(folderRow.Name);
-                    __instance.m_panelGpsName.Text = folderRow.Name;
-                    __instance.m_panelGpsName.Enabled = true;
-                }
-                else
-                {
-                    __instance.ClearRight();
-                }
-
-                _gpsFolderNameTextBox?.Enabled = false;
-                SetFolderNameTextboxTextNoEvent("");
-
-                _showFolderOnHudButton?.Enabled = true;
-                _hideFolderOnHudButton?.Enabled = true;
             }
             return false;
         }
@@ -302,13 +269,13 @@ public static class MyTerminalGpsControllerPatches
             }
             return true;
         }
+    }
 
-        static void SetFolderNameTextboxTextNoEvent(string text)
-        {
-            _gpsFolderNameTextBox.TextChanged -= OnFolderNameTextboxTextChanged;
-            _gpsFolderNameTextBox.Text = text;
-            _gpsFolderNameTextBox.TextChanged += OnFolderNameTextboxTextChanged;
-        }
+    static void SetFolderNameTextboxTextNoEvent(string text)
+    {
+        _gpsFolderNameTextBox.TextChanged -= OnFolderNameTextboxTextChanged;
+        _gpsFolderNameTextBox.Text = text;
+        _gpsFolderNameTextBox.TextChanged += OnFolderNameTextboxTextChanged;
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
@@ -327,14 +294,86 @@ public static class MyTerminalGpsControllerPatches
 
         if (folderCount != 0)
         {
+            EnableAndShowCheckboxes(true, false, false, false);
+
+            if (folderCount != 0 && gpsCount != 0)
+            {
+                __instance.ClearRight();
+
+                // disable all edit boxes
+                __instance.EnableEditBoxes(false, false, false);
+                __instance.m_buttonCopy.Enabled = false;
+
+                _gpsFolderNameTextBox?.Enabled = false;
+                SetFolderNameTextboxTextNoEvent("");
+            }
+            else if (folderCount > 0)
+            {
+                __instance.EnableEditBoxes(false, false, true);
+                __instance.m_buttonCopy.Enabled = true;
+
+                if (senderListbox.SelectedItems.All(i => i is GpsFolderRow))
+                {
+                    EnableAndShowCheckboxes(false, false, true, true);
+                }
+
+                if (folderCount == 1 && senderListbox.SelectedItems[0] is GpsFolderRow folderRow)
+                {
+                    __instance.ClearRightExceptName(folderRow.Name);
+                    __instance.m_panelGpsName.Text = folderRow.Name;
+                    __instance.m_panelGpsName.Enabled = true;
+
+                    if (Helpers.TryGetFolderGpses(folderRow.Name, out var gpses))
+                    {
+                        _checkboxFolderShowOnHud.SkipIndeterminateState = false;
+                        _checkboxFolderAlwaysVisible.SkipIndeterminateState = false;
+
+                        int totalCount = 0;
+                        int showOnHudCount = 0;
+                        int alwaysVisibleCount = 0;
+                        foreach (var gps in gpses)
+                        {
+                            totalCount++;
+                            if (gps.ShowOnHud)
+                                showOnHudCount++;
+                            if (gps.AlwaysVisible)
+                                alwaysVisibleCount++;
+                        }
+
+                        _checkboxFolderShowOnHud.State = showOnHudCount == totalCount ? CheckStateEnum.Checked : (showOnHudCount == 0 ? CheckStateEnum.Unchecked : CheckStateEnum.Indeterminate);
+                        _checkboxFolderAlwaysVisible.State = alwaysVisibleCount == totalCount ? CheckStateEnum.Checked : (alwaysVisibleCount == 0 ? CheckStateEnum.Unchecked : CheckStateEnum.Indeterminate);
+
+                        _checkboxFolderShowOnHud.SkipIndeterminateState = true;
+                        _checkboxFolderAlwaysVisible.SkipIndeterminateState = true;
+                    }
+                }
+                else
+                {
+                    __instance.ClearRight();
+                }
+
+                _gpsFolderNameTextBox?.Enabled = false;
+                SetFolderNameTextboxTextNoEvent("");
+            }
             return false;
         }
         else // vanilla behavior
         {
             _gpsFolderNameTextBox?.Enabled = true;
-            _showFolderOnHudButton?.Enabled = false;
-            _hideFolderOnHudButton?.Enabled = false;
+            EnableAndShowCheckboxes(true, true, false, false);
             return true;
+        }
+
+        void EnableAndShowCheckboxes(bool showGpsCheckboxes, bool enableGpsCheckboxes, bool showFolderCheckboxes, bool enableFolderCheckboxes)
+        {
+            __instance.m_checkGpsShowOnHud.Visible = showGpsCheckboxes;
+            __instance.m_checkGpsAlwaysVisible.Visible = showGpsCheckboxes;
+            __instance.m_checkGpsShowOnHud.Enabled = enableGpsCheckboxes;
+            __instance.m_checkGpsAlwaysVisible.Enabled = enableGpsCheckboxes;
+            _checkboxFolderShowOnHud.Visible = showFolderCheckboxes;
+            _checkboxFolderAlwaysVisible.Visible = showFolderCheckboxes;
+            _checkboxFolderShowOnHud.Enabled = enableFolderCheckboxes;
+            _checkboxFolderAlwaysVisible.Enabled = enableFolderCheckboxes;
         }
     }
 
@@ -523,10 +562,10 @@ public static class MyTerminalGpsControllerPatches
     public static void Close_Postfix()
     {
         DeferredFolderChange.Clear();
-        _expandFoldersCheckbox = null;
-        _showFolderOnHudButton = null;
-        _hideFolderOnHudButton = null;
-        _gpsFolderNameTextBox = null;
-        gpsListView = null;
+        _expandFoldersCheckbox = null!;
+        _gpsFolderNameTextBox = null!;
+        _checkboxFolderShowOnHud = null!;
+        _checkboxFolderAlwaysVisible = null!;
+        gpsListView = null!;
     }
 }

@@ -60,27 +60,45 @@ public static class Helpers
         return result.Count() > 0;
     }
 
-    public static void SetFolderShowOnHud(string folderId, bool showOnHud)
+    public static void SetFolderShowOnHud(string? folderId, bool showOnHud)
     {
-        if (!TryGetFolderGpses(folderId, out IEnumerable<MyGps> gpses))
+        IEnumerable<MyGps> gpses;
+        if (folderId is null)
+        {
+            gpses = GetUnsortedGpses();
+        }
+        else if (!TryGetFolderGpses(folderId, out gpses))
         {
             return;
         }
 
         foreach (MyGps gps in gpses)
         {
-            if (gps.TryGetFolderId(out string gpsFolderId) && gpsFolderId == folderId)
-            {
-                gps.ShowOnHud = showOnHud;
-                MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
-            }
+            MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
+        }
+    }
+
+    public static void SetFolderAlwaysVisible(string? folderId, bool alwaysVisible)
+    {
+        IEnumerable<MyGps> gpses;
+        if (folderId is null)
+        {
+            gpses = GetUnsortedGpses();
+        }
+        else if (!TryGetFolderGpses(folderId, out gpses))
+        {
+            return;
+        }
+
+        foreach (MyGps gps in gpses)
+        {
+            MySession.Static.Gpss.SendChangeAlwaysVisibleRequest(MySession.Static.LocalPlayerId, gps.Hash, alwaysVisible);
         }
     }
 
     public static void SetUnsortedFolderShowOnHud(bool showOnHud)
     {
-        var gpses = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => !i.Value.TryGetFolderId(out _)).Select(i => i.Value);
-        foreach (MyGps gps in gpses)
+        foreach (MyGps gps in GetUnsortedGpses())
         {
             gps.ShowOnHud = showOnHud;
             MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
@@ -100,8 +118,16 @@ public static class Helpers
 
     public static void CopyUnsortedGpsesToClipboard()
     {
-        var gpses = MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => !i.Value.TryGetFolderId(out _)).Select(i => i.Value);
-        string gpsStr = String.Join("\n", gpses.OrderBy(gps => gps.Name).Select(gps => gps.ToString()));
+        string gpsStr = String.Join("\n", GetUnsortedGpses().OrderBy(gps => gps.Name).Select(gps => gps.ToString()));
         MyVRage.Platform.System.Clipboard = gpsStr.ToString();
+    }
+
+    public static IEnumerable<MyGps> GetUnsortedGpses()
+    {
+        if (!MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
+        {
+            return Enumerable.Empty<MyGps>();
+        }
+        return MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => !i.Value.TryGetFolderId(out _)).Select(i => i.Value);
     }
 }
