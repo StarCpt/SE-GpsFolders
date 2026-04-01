@@ -1,6 +1,7 @@
 ﻿using GpsFolders.Rows;
 using HarmonyLib;
 using Sandbox.Game.Gui;
+using Sandbox.Game.GUI.HudViewers;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.Screens.Terminal;
 using Sandbox.Game.World;
@@ -12,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using VRage;
 using VRage.Game;
+using VRageMath;
 
 #pragma warning disable IDE0051
 namespace GpsFolders.Patches;
@@ -100,6 +102,27 @@ public static class MyTerminalGpsControllerPatches
             if (!focused && !__instance.m_listboxGps.HasFocus)
             {
                 SaveGpsName();
+            }
+        };
+
+        __instance.m_listboxGps.ItemMouseOver += listbox =>
+        {
+            if (listbox.MouseOverItem is { } item && item is not NonGpsRow && MySector.MainCamera != null)
+            {
+                var gps = (MyGps)item.UserData;
+                var gpsPos = gps.Coords;
+                var myPos = MyHudMarkerRender.GetDistanceMeasuringMatrix().Translation;
+                double dist = Vector3D.Distance(myPos, gpsPos);
+
+                // reuse strb from tooltip
+                item.ToolTip ??= new();
+                var strb = item.ToolTip.ToolTips.FirstOrDefault()?.Text ?? new();
+                strb.Clear();
+                strb.AppendLine(gps.Name);
+                MyHudMarkerRender.AppendDistance(strb, dist);
+
+                item.ToolTip.ToolTips.Clear();
+                item.ToolTip.AddToolTip(strb.ToString());
             }
         };
 
