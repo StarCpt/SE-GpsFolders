@@ -91,13 +91,16 @@ public static class Extensions
 
     public static void SetFolderId(this MyGps gps, string? id)
     {
-        if (id != null && (IsFolderIdValid(id) || string.IsNullOrWhiteSpace(id)))
+        if (string.IsNullOrWhiteSpace(id))
         {
-            if (gps.Description == null)
-            {
-                gps.Description = "";
-            }
+            id = null;
+        }
 
+        if (IsFolderIdValid(id) || id is null)
+        {
+            gps.Description ??= "";
+
+            // remove folder
             if (gps.Description.StartsWith(startTag))
             {
                 int endIndex =
@@ -118,6 +121,7 @@ public static class Extensions
                 }
             }
 
+            // add new folder
             if (IsFolderIdValid(id))
             {
                 gps.Description = startTag + id + endTag + (!gps.Description.StartsWith("\n") ? "\n" : "") + gps.Description;
@@ -178,5 +182,17 @@ public static class Extensions
         controller.m_needsSyncX = false;
         controller.m_needsSyncY = false;
         controller.m_needsSyncZ = false;
+    }
+
+    public static int Findindex<T>(this IReadOnlyList<T> list, Func<T, bool> predicate)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (predicate(list[i]))
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 }
