@@ -149,9 +149,10 @@ public static class MyTerminalGpsControllerPatches
             SetSelectedFoldersShowOnHud(false);
         };
 
-        (m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox")).TextChanged += textbox =>
+        m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox");
+        m_gpsFolderNameTextBox.EnterPressed += textbox =>
         {
-            ___m_listboxGps.SelectedItems.ForEach(i => i?.SetFolderId(textbox.Text));
+            ___m_listboxGps.SelectedItems.Where(i => i != null && i is not NonGpsRow && i.UserData is MyGps).ForEach(i => ((MyGps)i.UserData).SetFolderId(textbox.Text));
             __instance.PopulateList();
         };
         m_gpsFolderNameTextBox.Enabled = false;
