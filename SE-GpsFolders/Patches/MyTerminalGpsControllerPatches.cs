@@ -25,7 +25,6 @@ public static class MyTerminalGpsControllerPatches
     static MyGuiControlButton _showFolderOnHudButton;
     static MyGuiControlButton _hideFolderOnHudButton;
     static MyGuiControlTextbox _gpsFolderNameTextBox;
-
     public static GpsFolderListView gpsListView;
 
     static bool _selectingItem = false;
@@ -49,8 +48,8 @@ public static class MyTerminalGpsControllerPatches
         _showFolderOnHudButton.ButtonClicked += _ => SetSelectedFoldersShowOnHud(true);
         _hideFolderOnHudButton.ButtonClicked += _ => SetSelectedFoldersShowOnHud(false);
 
-        _gpsFolderNameTextBox.EnterPressed += textbox => DeferredFolderChange.Apply(__instance);
         _gpsFolderNameTextBox.TextChanged += OnFolderNameTextboxTextChanged;
+        _gpsFolderNameTextBox.EnterPressed += textbox => DeferredFolderChange.Apply(__instance);
         _gpsFolderNameTextBox.FocusChanged += (textbox, focused) =>
         {
             if (!focused)
@@ -105,13 +104,13 @@ public static class MyTerminalGpsControllerPatches
 
         public static void Apply(MyTerminalGpsController controller)
         {
-            if (Gpses.Count != 0)
+            if (string.IsNullOrWhiteSpace(NewFolder))
             {
-                if (string.IsNullOrWhiteSpace(NewFolder))
-                {
-                    NewFolder = null;
-                }
+                NewFolder = null;
+            }
 
+            if (Gpses.Count != 0 && (NewFolder is null || Extensions.IsFolderIdValid(NewFolder)))
+            {
                 bool folderChanged = false;
 
                 foreach (var gps in Gpses)
