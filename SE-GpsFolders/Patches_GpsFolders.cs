@@ -249,45 +249,15 @@ static class MyTerminalGpsControllerPatches
         }
     }
 
-    private static int SortingComparison(MyGps a, MyGps b)
-    {
-        if ((a.DiscardAt.HasValue && b.DiscardAt.HasValue) || (!a.DiscardAt.HasValue && !b.DiscardAt.HasValue))
-        {
-            return a.Name.CompareToIgnoreCase(b.Name);
-        }
-
-        if (!a.DiscardAt.HasValue)
-        {
-            return -1;
-        }
-
-        return 1;
-    }
-
     private static void AddRangeToList(MyGuiControlListbox m_listboxGps, IEnumerable<MyGps> gpses)
     {
         foreach (var gps in gpses)
         {
             var strb = new StringBuilder(gps.Name);
             MyGuiControlListbox.Item item = new MyGuiControlListbox.Item(ref strb, strb.ToString(), null, gps);
-            item.ColorMask = GetGpsColor(gps);
+            item.ColorMask = MyTerminalGpsController.GetGpsColor(gps);
             m_listboxGps.Add(item);
         }
-    }
-
-    private static Color GetGpsColor(MyGps gps)
-    {
-        if (!gps.DiscardAt.HasValue)
-        {
-            if (!gps.ShowOnHud)
-            {
-                return Color.White;
-            }
-
-            return gps.GPSColor;
-        }
-
-        return Color.Gray;
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
