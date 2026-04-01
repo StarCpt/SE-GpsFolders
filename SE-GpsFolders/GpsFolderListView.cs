@@ -141,18 +141,20 @@ public class GpsFolderListView
         {
             bool matchAny = false;
             int folderIndex = items.Count;
+            int visibleCount = 0;
             foreach (var entry in folder.Value.Entries)
             {
                 if ((searchEmpty && expandAllFolders) || (!searchEmpty && Match(folder.Value.FolderId, entry.Name)))
                 {
                     matchAny = true;
                     AddGpsRow(entry);
+                    visibleCount++;
                 }
             }
 
             if (matchAny || searchEmpty)
             {
-                AddFolderRow(folder.Value, folderIndex);
+                AddFolderRow(folder.Value, folderIndex, visibleCount);
             }
         }
 
@@ -160,12 +162,14 @@ public class GpsFolderListView
         {
             bool matchAny = false;
             int folderIndex = items.Count;
+            int visibleCount = 0;
             foreach (var entry in _unsortedFolder.Entries)
             {
                 if ((searchEmpty/* && expandAllFolders*/) || (!searchEmpty && Match(_unsortedFolder.DisplayName, entry.Name)))
                 {
                     matchAny = true;
                     AddGpsRow(entry);
+                    visibleCount++;
                 }
             }
 
@@ -173,15 +177,23 @@ public class GpsFolderListView
             {
                 //AddFolderRow(_unsortedFolder, folderIndex);
                 string toolTip = $"Unsorted Items\n{_unsortedFolder.Entries.Count} Item{(_unsortedFolder.Entries.Count != 1 ? "s" : "")}";
+                if (!searchEmpty && visibleCount != _unsortedFolder.Entries.Count)
+                {
+                    toolTip += $" ({visibleCount} shown)";
+                }
                 items.Insert(folderIndex, new UnsortedGpsFolderRow("", MISC_GPS_SEPARATOR_NAME, Color.Yellow, toolTip));
             }
         }
 
         return new ListReader<MyGuiControlListbox.Item>(items);
 
-        void AddFolderRow(FolderEntry folder, int index)
+        void AddFolderRow(FolderEntry folder, int index, int filteredItemCount)
         {
             string toolTip = $"{folder.Entries.Count} Item{(folder.Entries.Count != 1 ? "s" : "")}";
+            if (!searchEmpty && filteredItemCount != folder.Entries.Count)
+            {
+                toolTip += $" ({filteredItemCount} shown)";
+            }
             items.Insert(index, new GpsFolderRow(folder.FolderId, folder.DisplayName, Color.Yellow, MyGuiConstants.TEXTURE_ICON_MODS_LOCAL, toolTip));
         }
 
