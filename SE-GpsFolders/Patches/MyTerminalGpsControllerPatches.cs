@@ -1,6 +1,5 @@
 ﻿using GpsFolders.Rows;
 using HarmonyLib;
-using Sandbox.Game;
 using Sandbox.Game.Gui;
 using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.Screens.Terminal;
@@ -11,121 +10,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using VRage;
-using VRage.Game;
-using VRage.Utils;
-using VRageMath;
 
 #pragma warning disable IDE0051
-namespace GpsFolders;
-
-[HarmonyPatch]
-public static class MyGuiScreenTerminalPatches
-{
-    [HarmonyPatch(typeof(MyGuiScreenTerminal), nameof(MyGuiScreenTerminal.CreateGpsPageControls))]
-    [HarmonyPostfix]
-    public static void CreateGpsPageControls_Postfix(MyGuiControlTabPage gpsPage)
-    {
-        MyGuiControlLabel expandFoldersLabel = new MyGuiControlLabel()
-        {
-            Position = new Vector2(-0.196f, -0.267f + 0.011f),
-            Name = "ExpandFoldersLabel",
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_CENTER,
-            Text = MyTexts.GetString("Expand Folders"),
-            TextScale = 0.7f,
-        };
-        gpsPage.Controls.Add(expandFoldersLabel);
-
-        MyGuiControlCheckbox expandFoldersCheckbox = new MyGuiControlCheckbox
-        {
-            Position = new Vector2(-0.191f, -0.277f),
-            Name = "ExpandFoldersCheckbox",
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-            IsChecked = MyTerminalGpsControllerPatches.expandFoldersChecked,
-        };
-        expandFoldersCheckbox.SetToolTip(new MyToolTips("Expand Folders"));
-        gpsPage.Controls.Add(expandFoldersCheckbox);
-
-        MyGuiControlBase textGpsY = gpsPage.GetControlByName("textGpsY");
-        MyGuiControlBase buttonFromCurrent = gpsPage.GetControlByName("buttonFromCurrent");
-
-        MyGuiControlButton showFolderOnHudButton = new MyGuiControlButton
-        {
-            Text = "Show All",
-            Position = new Vector2(buttonFromCurrent.Position.X + 0.43f + 0.001f, buttonFromCurrent.Position.Y),
-            Name = "ShowFolderOnHudButton",
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-            VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
-            IsAutoScaleEnabled = true,
-            IsAutoEllipsisEnabled = true,
-            ShowTooltipWhenDisabled = false,
-        };
-        showFolderOnHudButton.Size = new Vector2(textGpsY.Size.X / 2.06f, 48f / MyGuiConstants.GUI_OPTIMAL_SIZE.Y);
-        showFolderOnHudButton.SetToolTip("Show all entries in the folder on HUD");
-        gpsPage.Controls.Add(showFolderOnHudButton);
-
-        MyGuiControlButton hideFolderOnHudButton = new MyGuiControlButton
-        {
-            Text = "Hide All",
-            Position = new Vector2(showFolderOnHudButton.Position.X + textGpsY.Size.X + 0.0002f, showFolderOnHudButton.Position.Y),
-            Name = "HideFolderOnHudButton",
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_TOP,
-            VisualStyle = MyGuiControlButtonStyleEnum.Rectangular,
-            IsAutoScaleEnabled = true,
-            IsAutoEllipsisEnabled = true,
-            ShowTooltipWhenDisabled = false,
-        };
-        hideFolderOnHudButton.Size = showFolderOnHudButton.Size;
-        hideFolderOnHudButton.SetToolTip("Hide all entries in the folder from HUD");
-        gpsPage.Controls.Add(hideFolderOnHudButton);
-
-        MyGuiControlLabel gpsDescriptionLabel = (MyGuiControlLabel)gpsPage.GetControlByName("labelGpsDesc");
-        MyGuiControlMultilineEditableText gpsDescriptionText = (MyGuiControlMultilineEditableText)gpsPage.GetControlByName("textGpsDesc");
-
-        MyGuiControlLabel gpsFolderLabel = new MyGuiControlLabel(
-            gpsDescriptionLabel.Position,
-            new Vector2(0.4f, 0.035f),
-            null,
-            null,
-            0.8f,
-            "Blue",
-            MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP)
-        {
-            Name = "GpsFolderNameLabel",
-            Text = "Folder Name:",
-        };
-        gpsFolderLabel.PositionY -= gpsFolderLabel.Size.Y * 0.25f;
-        gpsPage.Controls.Add(gpsFolderLabel);
-
-        MyGuiControlTextbox gpsFolderTextBox = new MyGuiControlTextbox(null, null, 32)
-        {
-            OriginAlign = MyGuiDrawAlignEnum.HORISONTAL_LEFT_AND_VERTICAL_TOP,
-            Position = gpsDescriptionText.Position,
-            Size = new Vector2(0.58f, 0.035f),
-            Name = "GpsFolderNameTextBox"
-        };
-        gpsFolderTextBox.PositionY -= gpsFolderLabel.Size.Y * 0.25f;
-        gpsFolderTextBox.Enabled = false;
-        gpsPage.Controls.Add(gpsFolderTextBox);
-
-        float offset = gpsFolderLabel.Size.Y * 0.5f + gpsFolderTextBox.Size.Y + 0.03f;
-        gpsDescriptionLabel.PositionY += offset;
-        gpsDescriptionText.PositionY += offset;
-        gpsDescriptionText.Size = new Vector2(gpsDescriptionText.Size.X, gpsDescriptionText.Size.Y - offset);
-    }
-}
+namespace GpsFolders.Patches;
 
 [HarmonyPatch]
 public static class MyTerminalGpsControllerPatches
 {
-    public const string MISC_GPS_SEPARATOR_NAME = "--------------------------------------------------";
+    static string? _currentFolder = null;
+    static bool _expandFolders = false;
 
-    public static string currentFolderName = null;
-    public static bool expandFoldersChecked = false;
-
-    static MyGuiControlCheckbox m_expandFoldersCheckbox;
-    static MyGuiControlButton m_showFolderOnHudButton;
-    static MyGuiControlButton m_hideFolderOnHudButton;
-    static MyGuiControlTextbox m_gpsFolderNameTextBox;
+    static MyGuiControlCheckbox _expandFoldersCheckbox;
+    static MyGuiControlButton _showFolderOnHudButton;
+    static MyGuiControlButton _hideFolderOnHudButton;
+    static MyGuiControlTextbox _gpsFolderNameTextBox;
 
     public static GpsFolderListView gpsListView;
 
@@ -133,32 +31,29 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void Init_Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent)
     {
-        (m_expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox")).IsCheckedChanged += delegate
+        _expandFoldersCheckbox = (MyGuiControlCheckbox)controlsParent.Controls.GetControlByName("ExpandFoldersCheckbox");
+        _showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton");
+        _hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton");
+        _gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox");
+
+        _expandFoldersCheckbox.IsChecked = _expandFolders;
+        _expandFoldersCheckbox.IsCheckedChanged += delegate
         {
-            expandFoldersChecked = !expandFoldersChecked;
+            _expandFolders = !_expandFolders;
             __instance.PopulateList();
         };
 
-        (m_showFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("ShowFolderOnHudButton")).ButtonClicked += delegate
-        {
-            SetSelectedFoldersShowOnHud(true);
-        };
+        _showFolderOnHudButton.ButtonClicked += _ => SetSelectedFoldersShowOnHud(true);
+        _hideFolderOnHudButton.ButtonClicked += _ => SetSelectedFoldersShowOnHud(false);
 
-        (m_hideFolderOnHudButton = (MyGuiControlButton)controlsParent.Controls.GetControlByName("HideFolderOnHudButton")).ButtonClicked += delegate
-        {
-            SetSelectedFoldersShowOnHud(false);
-        };
-
-        m_gpsFolderNameTextBox = (MyGuiControlTextbox)controlsParent.Controls.GetControlByName("GpsFolderNameTextBox");
-        m_gpsFolderNameTextBox.EnterPressed += textbox => ApplyFolderName(textbox.Text);
-        m_gpsFolderNameTextBox.FocusChanged += (textbox, focused) =>
+        _gpsFolderNameTextBox.EnterPressed += textbox => ApplyFolderName(textbox.Text);
+        _gpsFolderNameTextBox.FocusChanged += (textbox, focused) =>
         {
             if (!focused)
             {
                 ApplyFolderName(((MyGuiControlTextbox)textbox).Text);
             }
         };
-        m_gpsFolderNameTextBox.Enabled = false;
 
         __instance.m_panelGpsName.EnterPressed += textbox => SaveGpsName();
         __instance.m_panelGpsName.FocusChanged += (textbox, focused) =>
@@ -217,11 +112,6 @@ public static class MyTerminalGpsControllerPatches
         }
     }
 
-    private static void M_panelGpsName_FocusChanged(MyGuiControlBase arg1, bool arg2)
-    {
-        throw new NotImplementedException();
-    }
-
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.PopulateList))]
     [HarmonyPrefix]
     public static bool PopulateList_Prefix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps, List<MyGps> ___m_gpsListCache)
@@ -235,7 +125,7 @@ public static class MyTerminalGpsControllerPatches
         {
             gpsListView = GpsFolderListView.Create(MySession.Static.Gpss[MySession.Static.LocalPlayerId].Select(i => i.Value));
 
-            var itemsToAdd = gpsListView.GetView(ref currentFolderName, ___m_searchString, expandFoldersChecked);
+            var itemsToAdd = gpsListView.GetView(ref _currentFolder, ___m_searchString, _expandFolders);
             ___m_gpsListCache.AddRange(itemsToAdd.Select(i => (MyGps)i.UserData));
 
             itemsToAdd.ForEach(i => ___m_listboxGps.Add(i));
@@ -288,8 +178,8 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void PopulateList_Postfix(MyTerminalGpsController __instance, string ___m_searchString, MyGuiControlListbox ___m_listboxGps)
     {
-        m_showFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
-        m_hideFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
+        _showFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
+        _hideFolderOnHudButton?.Enabled = string.IsNullOrWhiteSpace(___m_searchString);
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
@@ -325,11 +215,11 @@ public static class MyTerminalGpsControllerPatches
                 __instance.EnableEditBoxes(false, false, false);
                 __instance.m_buttonCopy.Enabled = false;
 
-                m_gpsFolderNameTextBox?.Enabled = false;
-                m_gpsFolderNameTextBox?.Text = "";
+                _gpsFolderNameTextBox?.Enabled = false;
+                _gpsFolderNameTextBox?.Text = "";
 
-                m_showFolderOnHudButton?.Enabled = false;
-                m_hideFolderOnHudButton?.Enabled = false;
+                _showFolderOnHudButton?.Enabled = false;
+                _hideFolderOnHudButton?.Enabled = false;
             }
             else if (folderCount > 0)
             {
@@ -347,17 +237,17 @@ public static class MyTerminalGpsControllerPatches
                     __instance.ClearRight();
                 }
 
-                m_gpsFolderNameTextBox?.Enabled = false;
-                m_gpsFolderNameTextBox?.Text = "";
+                _gpsFolderNameTextBox?.Enabled = false;
+                _gpsFolderNameTextBox?.Text = "";
 
-                m_showFolderOnHudButton?.Enabled = true;
-                m_hideFolderOnHudButton?.Enabled = true;
+                _showFolderOnHudButton?.Enabled = true;
+                _hideFolderOnHudButton?.Enabled = true;
             }
             else // vanilla behavior
             {
-                m_gpsFolderNameTextBox?.Enabled = true;
-                m_showFolderOnHudButton?.Enabled = false;
-                m_hideFolderOnHudButton?.Enabled = false;
+                _gpsFolderNameTextBox?.Enabled = true;
+                _showFolderOnHudButton?.Enabled = false;
+                _hideFolderOnHudButton?.Enabled = false;
                 return true;
             }
 
@@ -380,10 +270,10 @@ public static class MyTerminalGpsControllerPatches
 
                 folderId ??= string.Empty;
 
-                if (m_gpsFolderNameTextBox != null)
+                if (_gpsFolderNameTextBox != null)
                 {
-                    m_gpsFolderNameTextBox.Enabled = true;
-                    m_gpsFolderNameTextBox.Text = allGpsesAreInSameFolder ? folderId : "";
+                    _gpsFolderNameTextBox.Enabled = true;
+                    _gpsFolderNameTextBox.Text = allGpsesAreInSameFolder ? folderId : "";
                 }
             }
             return true;
@@ -403,9 +293,9 @@ public static class MyTerminalGpsControllerPatches
         }
         else // vanilla behavior
         {
-            m_gpsFolderNameTextBox?.Enabled = true;
-            m_showFolderOnHudButton?.Enabled = false;
-            m_hideFolderOnHudButton?.Enabled = false;
+            _gpsFolderNameTextBox?.Enabled = true;
+            _showFolderOnHudButton?.Enabled = false;
+            _hideFolderOnHudButton?.Enabled = false;
             return true;
         }
     }
@@ -414,7 +304,7 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void EnableEditBoxes_Postfix(bool enable)
     {
-        m_gpsFolderNameTextBox?.Enabled = enable;
+        _gpsFolderNameTextBox?.Enabled = enable;
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxDoubleClick))]
@@ -424,10 +314,10 @@ public static class MyTerminalGpsControllerPatches
         bool runOriginal = !(senderListbox.SelectedItems.FirstOrDefault() is NonGpsRow);
         if (senderListbox.SelectedItems.FirstOrDefault() is GpsFolderRow folder)
         {
-            if (currentFolderName == null)
-                currentFolderName = folder.Name;
+            if (_currentFolder == null)
+                _currentFolder = folder.Name;
             else
-                currentFolderName = null;
+                _currentFolder = null;
 
             MyGuiScreenTerminal.m_instance?.m_controllerGps?.PopulateList();
             return false;
@@ -459,15 +349,21 @@ public static class MyTerminalGpsControllerPatches
         {
             string oldFolderName = folder.Name;
             string newFolderName = senderTextbox.Text;
+
+            if (string.IsNullOrWhiteSpace(newFolderName))
+            {
+                newFolderName = "";
+            }
+
             if (gpsListView.TrySetFolderId(folder.Name, newFolderName))
             {
-                if (oldFolderName == currentFolderName)
+                if (oldFolderName == _currentFolder)
                 {
-                    currentFolderName = newFolderName;
+                    _currentFolder = newFolderName;
                 }
 
                 __instance.ClearList();
-                gpsListView.GetView(ref currentFolderName, gpsListView.LastSearchText, expandFoldersChecked).ForEach(row => __instance.m_listboxGps.Add(row));
+                gpsListView.GetView(ref _currentFolder, gpsListView.LastSearchText, _expandFolders).ForEach(row => __instance.m_listboxGps.Add(row));
 
                 __instance.m_listboxGps.SelectSingleItem(__instance.m_listboxGps.Items.FirstOrDefault(i => i is GpsFolderRow row && row.Name == newFolderName));
                 __instance.m_listboxGps.ScrollToFirstSelection();
@@ -511,9 +407,9 @@ public static class MyTerminalGpsControllerPatches
         bool runOriginal = !(___m_listboxGps.SelectedItems.FirstOrDefault() is NonGpsRow);
         if (___m_listboxGps.SelectedItems.FirstOrDefault() is GpsFolderRow folder)
         {
-            if (currentFolderName == folder.Name)
+            if (_currentFolder == folder.Name)
             {
-                currentFolderName = null;
+                _currentFolder = null;
             }
 
             gpsListView?.DeleteFolder(folder.Name);
@@ -526,11 +422,10 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPostfix]
     public static void Close_Postfix()
     {
-        m_expandFoldersCheckbox = null;
-        m_showFolderOnHudButton = null;
-        m_hideFolderOnHudButton = null;
-        m_gpsFolderNameTextBox = null;
+        _expandFoldersCheckbox = null;
+        _showFolderOnHudButton = null;
+        _hideFolderOnHudButton = null;
+        _gpsFolderNameTextBox = null;
         gpsListView = null;
-        //MiscellaneousPatches.m_showDistanceColumnCheckbox = null;
     }
 }

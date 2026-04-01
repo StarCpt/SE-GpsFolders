@@ -62,7 +62,7 @@ public class GpsFolderListView
         return view;
     }
 
-    public ListReader<MyGuiControlListbox.Item> GetView(ref string currentFolderView, string searchText, bool expandAllFolders)
+    public ListReader<MyGuiControlListbox.Item> GetView(ref string? currentFolderView, string searchText, bool expandAllFolders)
     {
         LastSearchText = searchText;
 

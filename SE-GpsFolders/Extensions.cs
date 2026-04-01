@@ -127,7 +127,7 @@ public static class Extensions
         }
     }
 
-    public static bool IsFolderIdValid(string folderName)
+    public static bool IsFolderIdValid(string? folderName)
     {
         return !string.IsNullOrWhiteSpace(folderName) &&
             folderName.Length >= minTagLength &&
