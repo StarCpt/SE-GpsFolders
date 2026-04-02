@@ -28,7 +28,7 @@ public static class MyTerminalGpsControllerPatches
     static MyGuiControlTextbox _gpsFolderNameTextBox;
     static CustomIndeterminateCheckbox _checkboxFolderShowOnHud;
     static CustomIndeterminateCheckbox _checkboxFolderAlwaysVisible;
-    public static GpsFolderListView gpsListView;
+    static GpsFolderListView gpsListView;
 
     static Vector3D DistanceMeasuringPosition
     {
