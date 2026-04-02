@@ -432,23 +432,6 @@ public static class MyTerminalGpsControllerPatches
         _gpsFolderNameTextBox?.Enabled = enable;
     }
 
-    [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.FillRight))]
-    [HarmonyPatch([typeof(MyGps)])]
-    [HarmonyPostfix]
-    public static void FillRight_Postfix(MyTerminalGpsController __instance, MyGps gps)
-    {
-        if (__instance.m_listboxGps.SelectedItems.Count > 0
-            && __instance.m_listboxGps.SelectedItems.All(i => i is not NonGpsRow)
-            && Helpers.AllGpsesAreInSameFolder(__instance.m_listboxGps.SelectedItems.Select(i => (MyGps)i.UserData), out string? folder))
-        {
-            SetFolderNameTextboxTextNoEvent(folder ?? string.Empty);
-        }
-        else
-        {
-            SetFolderNameTextboxTextNoEvent(string.Empty);
-        }
-    }
-
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxDoubleClick))]
     [HarmonyPrefix]
     public static bool OnListboxDoubleClick_Prefix(MyGuiControlListbox senderListbox)
