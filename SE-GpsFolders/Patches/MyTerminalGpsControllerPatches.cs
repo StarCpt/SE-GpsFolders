@@ -539,27 +539,48 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPrefix]
     public static bool OnButtonPressedCopy_Prefix(MyGuiControlButton sender, MyGuiControlListbox ___m_listboxGps)
     {
-        if (___m_listboxGps.SelectedItems.FirstOrDefault() == null)
+        if (___m_listboxGps.SelectedItems.Count == 0)
             return false;
 
-        bool runOriginal = !(___m_listboxGps.SelectedItems.FirstOrDefault() is NonGpsRow);
-        if (___m_listboxGps.SelectedItems.FirstOrDefault() is GpsFolderRow folder)
+        IComparer<MyGps> gpsComparer = Comparer<MyGps>.Create(MyTerminalGpsController.SortingComparison);
+
+        List<string> gpsLines = [];
+        foreach (var item in ___m_listboxGps.SelectedItems)
         {
-            Helpers.CopyFolderToClipboard(folder.Name);
-            return false;
-        }
-        else if (___m_listboxGps.SelectedItems.FirstOrDefault() is UnsortedGpsFolderRow unsorted)
-        {
-            Helpers.CopyUnsortedGpsesToClipboard();
-            return false;
-        }
-        else if (___m_listboxGps.SelectedItems.FirstOrDefault().TryGetFolderId(out string tag))
-        {
-            MyVRage.Platform.System.Clipboard = ___m_listboxGps.SelectedItems.FirstOrDefault().UserData.ToString() + tag + ':';
-            return false;
+            if (item is GpsFolderRow folder)
+            {
+                if (Helpers.TryGetFolderGpses(folder.Name, out var gpses))
+                {
+                    foreach (var gps in gpses.OrderBy(i => i, gpsComparer))
+                    {
+                        gpsLines.Add(gps.ToString() + folder.Name + ':');
+                    }
+                }
+            }
+            else if (item is UnsortedGpsFolderRow unsortedFolder)
+            {
+                var gpses = Helpers.GetUnsortedGpses();
+                foreach (var gps in gpses.OrderBy(i => i, gpsComparer))
+                {
+                    gpsLines.Add(gps.ToString());
+                }
+            }
+            else if (item.TryGetFolderId(out string folderName))
+            {
+                gpsLines.Add(((MyGps)item.UserData).ToString() + folderName + ':');
+            }
+            else
+            {
+                gpsLines.Add(((MyGps)item.UserData).ToString());
+            }
         }
 
-        return runOriginal;
+        if (gpsLines.Count > 0)
+        {
+            MyVRage.Platform.System.Clipboard = string.Join("\n", gpsLines);
+        }
+
+        return false;
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Delete))]

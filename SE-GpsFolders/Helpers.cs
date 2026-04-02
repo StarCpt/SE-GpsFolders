@@ -11,26 +11,6 @@ namespace GpsFolders;
 
 public static class Helpers
 {
-    public static string GetDistanceString(double meters)
-    {
-        if (meters >= 1000000)
-            return $"{meters / 1000:0.#} km";
-        else if (meters >= 1000)
-            return $"{meters / 1000:0.##} km";
-        else
-            return $"{meters:0.#} m";
-    }
-
-    public static string GetDistanceStringShort(double meters)
-    {
-        if (meters >= 1000000)
-            return $"{meters / 1000000:0.#}kkm";
-        else if (meters >= 1000)
-            return $"{meters / 1000:0}km";
-        else
-            return $"{meters:0}m";
-    }
-
     public static void ShowConfirmationDialog(string caption, string text, Action<MyGuiScreenMessageBox.ResultEnum> callback)
     {
         var confirmationDialog = MyGuiSandbox.CreateMessageBox(
@@ -94,32 +74,6 @@ public static class Helpers
         {
             MySession.Static.Gpss.SendChangeAlwaysVisibleRequest(MySession.Static.LocalPlayerId, gps.Hash, alwaysVisible);
         }
-    }
-
-    public static void SetUnsortedFolderShowOnHud(bool showOnHud)
-    {
-        foreach (MyGps gps in GetUnsortedGpses())
-        {
-            gps.ShowOnHud = showOnHud;
-            MySession.Static.Gpss.SendChangeShowOnHudRequest(MySession.Static.LocalPlayerId, gps.Hash, showOnHud);
-        }
-    }
-
-    public static void CopyFolderToClipboard(string folderId)
-    {
-        if (!TryGetFolderGpses(folderId, out IEnumerable<MyGps> gpses))
-        {
-            return;
-        }
-
-        string gpsStr = String.Join("\n", gpses.OrderBy(gps => gps.Name).Select(gps => $"{gps.ToString()}{folderId}:"));
-        MyVRage.Platform.System.Clipboard = gpsStr.ToString();
-    }
-
-    public static void CopyUnsortedGpsesToClipboard()
-    {
-        string gpsStr = String.Join("\n", GetUnsortedGpses().OrderBy(gps => gps.Name).Select(gps => gps.ToString()));
-        MyVRage.Platform.System.Clipboard = gpsStr.ToString();
     }
 
     public static IEnumerable<MyGps> GetUnsortedGpses()
