@@ -30,6 +30,28 @@ public static class MyTerminalGpsControllerPatches
     static CustomIndeterminateCheckbox _checkboxFolderAlwaysVisible;
     public static GpsFolderListView gpsListView;
 
+    static Vector3D DistanceMeasuringPosition
+    {
+        get
+        {
+            MatrixD? controlledEntityMatrix = MyHudMarkerRender.ControlledEntityMatrix;
+            if (!controlledEntityMatrix.HasValue || (!MySession.Static.CameraOnCharacter && MySession.Static.IsCameraUserControlledSpectator()))
+            {
+                return MyHudMarkerRender.CameraMatrix.Translation;
+            }
+
+            MatrixD? localCharacterMatrix = MyHudMarkerRender.LocalCharacterMatrix;
+            if (MySession.Static.CameraOnCharacter && localCharacterMatrix.HasValue)
+            {
+                return localCharacterMatrix.Value.Translation;
+            }
+            else
+            {
+                return controlledEntityMatrix.Value.Translation;
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Init))]
     [HarmonyPostfix]
     public static void Init_Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent)
@@ -109,7 +131,7 @@ public static class MyTerminalGpsControllerPatches
             {
                 var gps = (MyGps)item.UserData;
                 var gpsPos = gps.Coords;
-                var myPos = MyHudMarkerRender.GetDistanceMeasuringMatrix().Translation;
+                var myPos = DistanceMeasuringPosition;
                 double dist = Vector3D.Distance(myPos, gpsPos);
 
                 // reuse strb from tooltip
