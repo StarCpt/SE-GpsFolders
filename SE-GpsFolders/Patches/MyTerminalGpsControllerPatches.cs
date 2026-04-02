@@ -30,8 +30,6 @@ public static class MyTerminalGpsControllerPatches
     static CustomIndeterminateCheckbox _checkboxFolderAlwaysVisible;
     public static GpsFolderListView gpsListView;
 
-    static bool _selectingItem = false;
-
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.Init))]
     [HarmonyPostfix]
     public static void Init_Postfix(MyTerminalGpsController __instance, IMyGuiControlsParent controlsParent)
@@ -176,7 +174,7 @@ public static class MyTerminalGpsControllerPatches
 
     private static void OnFolderNameTextboxTextChanged(MyGuiControlTextbox textbox)
     {
-        if (!_selectingItem && MyGuiScreenTerminal.m_instance?.m_controllerGps?.m_listboxGps is { } listbox)
+        if (MyGuiScreenTerminal.m_instance?.m_controllerGps?.m_listboxGps is { } listbox)
         {
             DeferredFolderChange.Clear();
             DeferredFolderChange.NewFolder = textbox.Text;
@@ -250,8 +248,6 @@ public static class MyTerminalGpsControllerPatches
     [HarmonyPrefix]
     public static bool OnListboxItemsSelected_Prefix(MyTerminalGpsController __instance, MyGuiControlListbox senderListbox)
     {
-        _selectingItem = true;
-
         __instance.TrySync();
         if (senderListbox.SelectedItems.Count > 0 && senderListbox.SelectedItems.Count(i => i is NonGpsRow) > 0)
         {
@@ -296,16 +292,12 @@ public static class MyTerminalGpsControllerPatches
 
     static void SetFolderNameTextboxTextNoEvent(string text)
     {
-        _gpsFolderNameTextBox.TextChanged -= OnFolderNameTextboxTextChanged;
-        _gpsFolderNameTextBox.Text = text;
-        _gpsFolderNameTextBox.TextChanged += OnFolderNameTextboxTextChanged;
-    }
-
-    [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxItemsSelected))]
-    [HarmonyPostfix]
-    public static void OnListboxItemsSelected_Postfix()
-    {
-        _selectingItem = false;
+        if (_gpsFolderNameTextBox != null)
+        {
+            _gpsFolderNameTextBox.TextChanged -= OnFolderNameTextboxTextChanged;
+            _gpsFolderNameTextBox.Text = text;
+            _gpsFolderNameTextBox.TextChanged += OnFolderNameTextboxTextChanged;
+        }
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.SetEnabledStates))]
@@ -416,6 +408,23 @@ public static class MyTerminalGpsControllerPatches
     public static void EnableEditBoxes_Postfix(bool enable)
     {
         _gpsFolderNameTextBox?.Enabled = enable;
+    }
+
+    [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.FillRight))]
+    [HarmonyPatch([typeof(MyGps)])]
+    [HarmonyPostfix]
+    public static void FillRight_Postfix(MyTerminalGpsController __instance, MyGps gps)
+    {
+        if (__instance.m_listboxGps.SelectedItems.Count > 0
+            && __instance.m_listboxGps.SelectedItems.All(i => i is not NonGpsRow)
+            && Helpers.AllGpsesAreInSameFolder(__instance.m_listboxGps.SelectedItems.Select(i => (MyGps)i.UserData), out string? folder))
+        {
+            SetFolderNameTextboxTextNoEvent(folder ?? string.Empty);
+        }
+        else
+        {
+            SetFolderNameTextboxTextNoEvent(string.Empty);
+        }
     }
 
     [HarmonyPatch(typeof(MyTerminalGpsController), nameof(MyTerminalGpsController.OnListboxDoubleClick))]

@@ -84,4 +84,18 @@ public static class Helpers
         }
         return MySession.Static.Gpss[MySession.Static.LocalPlayerId].Where(i => !i.Value.TryGetFolderId(out _)).Select(i => i.Value);
     }
+
+    public static bool AllGpsesAreInSameFolder(IEnumerable<MyGps> gpses, out string? folder)
+    {
+        folder = gpses.First().GetFolderId();
+        foreach (var gps in gpses)
+        {
+            if (gps.GetFolderId() != folder)
+            {
+                folder = null;
+                return false;
+            }
+        }
+        return true;
+    }
 }
