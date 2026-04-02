@@ -1,5 +1,6 @@
 ﻿using GpsFolders.Rows;
 using Sandbox.Game.Screens.Helpers;
+using Sandbox.Game.Screens.Terminal;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
 using System;
@@ -50,14 +51,7 @@ public class GpsFolderListView
                 target = view._unsortedFolder.Entries;
             }
 
-            target.OrderedInsert(gps, (x, y) =>
-            {
-                if (x.Name == null)
-                    return -1;
-                else if (y.Name == null)
-                    return 1;
-                return x.Name.CompareTo(y.Name);
-            });
+            target.OrderedInsert(gps, MyTerminalGpsController.SortingComparison);
         }
         return view;
     }
@@ -237,15 +231,7 @@ public class GpsFolderListView
 
         foreach (var entry in folder.Entries)
         {
-            newFolder.Entries.OrderedInsert(entry, (x, y) =>
-            {
-                if (x.Name == null)
-                    return -1;
-                else if (y.Name == null)
-                    return 1;
-                return x.Name.CompareTo(y.Name);
-            });
-
+            newFolder.Entries.OrderedInsert(entry, MyTerminalGpsController.SortingComparison);
             entry.SetFolderId(newId);
         }
 
