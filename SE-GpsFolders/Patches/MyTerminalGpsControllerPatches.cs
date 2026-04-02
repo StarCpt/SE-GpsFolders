@@ -188,6 +188,11 @@ public static class MyTerminalGpsControllerPatches
 
                 if (folderChanged)
                 {
+                    if (_currentFolder != null)
+                    {
+                        _currentFolder = NewFolder;
+                    }
+
                     controller.PopulateList();
                 }
             }
