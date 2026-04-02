@@ -10,6 +10,7 @@ using VRageMath;
 
 namespace GpsFolders.Patches;
 
+[HarmonyPatch]
 static class MyGpsCollectionPatches
 {
     static readonly int PARSE_MAX_COUNT = 100;
