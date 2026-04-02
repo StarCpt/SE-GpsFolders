@@ -171,7 +171,7 @@ public class GpsFolderListView
             {
                 //AddFolderRow(_unsortedFolder, folderIndex);
                 string toolTip = $"Unsorted Items\n{_unsortedFolder.Entries.Count} Item{(_unsortedFolder.Entries.Count != 1 ? "s" : "")}";
-                if (!searchEmpty && visibleCount != _unsortedFolder.Entries.Count)
+                if (!searchEmpty)
                 {
                     toolTip += $" ({visibleCount} shown)";
                 }
@@ -184,7 +184,7 @@ public class GpsFolderListView
         void AddFolderRow(FolderEntry folder, int index, int filteredItemCount)
         {
             string toolTip = $"{folder.Entries.Count} Item{(folder.Entries.Count != 1 ? "s" : "")}";
-            if (!searchEmpty && filteredItemCount != folder.Entries.Count)
+            if (!searchEmpty)
             {
                 toolTip += $" ({filteredItemCount} shown)";
             }
