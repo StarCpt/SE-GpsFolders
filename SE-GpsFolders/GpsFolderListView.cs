@@ -256,7 +256,10 @@ public class GpsFolderListView
                 {
                     foreach (MyGps gps in gpsesToDelete)
                     {
-                        MySession.Static.Gpss.SendDeleteGpsRequest(MySession.Static.LocalPlayerId, gps.Hash);
+                        if (!Helpers.IsContractGps(gps))
+                        {
+                            MySession.Static.Gpss.SendDeleteGpsRequest(MySession.Static.LocalPlayerId, gps.Hash);
+                        }
                     }
                 }
             });

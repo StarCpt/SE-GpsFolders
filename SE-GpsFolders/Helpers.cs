@@ -98,4 +98,9 @@ public static class Helpers
         }
         return true;
     }
+
+    public static bool IsContractGps(MyGps gps)
+    {
+        return gps.ContractId != 0;
+    }
 }
