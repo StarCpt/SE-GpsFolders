@@ -157,7 +157,7 @@ public static class Extensions
     public static void ClearRightExceptName(this MyTerminalGpsController controller, string gpsNameTextboxText, bool clearMultiSelectValues = true)
     {
         controller.UnhookSyncEvents(clearMultiSelectValues);
-        controller.m_panelGpsDesc = null;
+        controller.m_panelGpsDesc.Text = null;
         controller.m_xCoord.Text = "";
         controller.m_yCoord.Text = "";
         controller.m_zCoord.Text = "";
