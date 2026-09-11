@@ -98,9 +98,9 @@ public static class Extensions
                 if (gps.Description.StartsWith(startTag))
                 {
                     int endIndex =
-                        gps.Description.Contains(endTag) ?
-                        gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1)) :
-                        gps.Description.Length;
+                        gps.Description.Contains(endTag)
+                        ? gps.Description.IndexOf(endTag, startIndex, Math.Min(gps.Description.Length - startIndex, startIndex + maxTagLength + 1))
+                        : (gps.Description.Length - 1);
                     if (endIndex > startIndex)
                     {
                         gps.Description = gps.Description.Remove(0, endIndex + endTag.Length);
