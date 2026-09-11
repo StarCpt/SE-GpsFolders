@@ -116,12 +116,25 @@ public static class MyTerminalGpsControllerPatches
             }
         };
 
-        __instance.m_panelGpsName.EnterPressed += textbox => SaveGpsName();
+        // gps folders repopulates the list so we need to apply name and description
+        // changes as soon as the text boxes are defocused so they aren't lost when the list is refreshed
+
+        // save name on enter key or defocus
+        __instance.m_panelGpsName.EnterPressed += textbox => SaveSelectedSingleGps();
         __instance.m_panelGpsName.FocusChanged += (textbox, focused) =>
         {
             if (!focused && !__instance.m_listboxGps.HasFocus)
             {
-                SaveGpsName();
+                SaveSelectedSingleGps();
+            }
+        };
+
+        // save description on defocus
+        __instance.m_panelGpsDesc.FocusChanged += (control, focused) =>
+        {
+            if (!focused && !__instance.m_listboxGps.HasFocus)
+            {
+                SaveSelectedSingleGps();
             }
         };
 
@@ -146,8 +159,10 @@ public static class MyTerminalGpsControllerPatches
             }
         };
 
-        void SaveGpsName()
+        void SaveSelectedSingleGps()
         {
+            // name and description are only editable when a single gps entry is selected,
+            // so we just do a check in case either somehow changed
             if (__instance.m_listboxGps.SelectedItems.Count == 1 && __instance.m_listboxGps.SelectedItems[0] is not NonGpsRow)
             {
                 __instance.TrySync();
