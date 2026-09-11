@@ -28,7 +28,7 @@ public static class MyTerminalGpsControllerPatches
     static MyGuiControlTextbox _gpsFolderNameTextBox;
     static CustomIndeterminateCheckbox _checkboxFolderShowOnHud;
     static CustomIndeterminateCheckbox _checkboxFolderAlwaysVisible;
-    static GpsFolderListView gpsListView;
+    static GpsFolderListView _gpsListView;
 
     static Vector3D DistanceMeasuringPosition
     {
@@ -220,9 +220,9 @@ public static class MyTerminalGpsControllerPatches
 
         if (MySession.Static.Gpss.ExistsForPlayer(MySession.Static.LocalPlayerId))
         {
-            gpsListView = GpsFolderListView.Create(MySession.Static.Gpss[MySession.Static.LocalPlayerId].Select(i => i.Value));
+            _gpsListView = GpsFolderListView.Create(MySession.Static.Gpss[MySession.Static.LocalPlayerId].Select(i => i.Value));
 
-            var itemsToAdd = gpsListView.GetView(ref _currentFolder, ___m_searchString, _expandFolders);
+            var itemsToAdd = _gpsListView.GetView(ref _currentFolder, ___m_searchString, _expandFolders);
             ___m_gpsListCache.AddRange(itemsToAdd.Select(i => (MyGps)i.UserData));
 
             itemsToAdd.ForEach(i => ___m_listboxGps.Add(i));
@@ -485,7 +485,7 @@ public static class MyTerminalGpsControllerPatches
                 newFolderName = "";
             }
 
-            if (gpsListView.TrySetFolderId(folder.Name, newFolderName))
+            if (_gpsListView.TrySetFolderId(folder.Name, newFolderName))
             {
                 if (oldFolderName == _currentFolder)
                 {
@@ -493,7 +493,7 @@ public static class MyTerminalGpsControllerPatches
                 }
 
                 __instance.ClearList();
-                gpsListView.GetView(ref _currentFolder, gpsListView.LastSearchText, _expandFolders).ForEach(row => __instance.m_listboxGps.Add(row));
+                _gpsListView.GetView(ref _currentFolder, _gpsListView.LastSearchText, _expandFolders).ForEach(row => __instance.m_listboxGps.Add(row));
 
                 __instance.m_listboxGps.SelectSingleItem(__instance.m_listboxGps.Items.FirstOrDefault(i => i is GpsFolderRow row && row.Name == newFolderName));
                 __instance.m_listboxGps.ScrollToFirstSelection();
@@ -614,7 +614,7 @@ public static class MyTerminalGpsControllerPatches
                 _currentFolder = null;
             }
 
-            gpsListView?.DeleteFolder(folder.Name);
+            _gpsListView?.DeleteFolder(folder.Name);
             return false;
         }
         return runOriginal;
@@ -629,6 +629,6 @@ public static class MyTerminalGpsControllerPatches
         _gpsFolderNameTextBox = null!;
         _checkboxFolderShowOnHud = null!;
         _checkboxFolderAlwaysVisible = null!;
-        gpsListView = null!;
+        _gpsListView = null!;
     }
 }
