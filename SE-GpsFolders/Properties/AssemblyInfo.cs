@@ -4,3 +4,4 @@
 [assembly: AssemblyFileVersion("1.6.5.0")]
 
 [assembly: System.Runtime.CompilerServices.IgnoresAccessChecksTo("Sandbox.Game")]
+[assembly: System.Runtime.CompilerServices.IgnoresAccessChecksTo("Sandbox.Graphics")]
